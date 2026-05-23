@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { Nav } from "@/components/nav";
 import { Hero } from "@/components/hero";
+import { Studio } from "@/components/studio";
 import { HowItWorks } from "@/components/how-it-works";
 import { Films } from "@/components/films";
 import { Waitlist } from "@/components/waitlist";
@@ -39,6 +40,7 @@ export function FilmWriteApp() {
     <>
       <Nav />
       <Hero tweaks={tweaks} />
+      <Studio tweaks={tweaks} mode="demo" />
       <HowItWorks />
       <Films />
       <Waitlist />
