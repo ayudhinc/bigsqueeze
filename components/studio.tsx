@@ -187,7 +187,7 @@ export function Studio({ tweaks, mode = "demo" }: { tweaks: Tweaks; mode?: "demo
   const [pipelineError, setPipelineError] = useState<string | null>(null);
   const [filmUrl, setFilmUrl] = useState<string | null>(null);
   const [provider, setProvider] = useState("simulated");
-  const [aspect, setAspect] = useState("16:9");
+  const [aspect, setAspect] = useState("9:16");
   const [targetLength, setTargetLength] = useState("5s");
   const [renders, setRenders] = useState<Array<{ file: string; url: string; size: number }>>([]);
   const [presets] = useState(() => getPresets());

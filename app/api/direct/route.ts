@@ -12,7 +12,7 @@ export async function POST(req: Request) {
     const body = (await req.json()) as { idea?: string; provider?: string; aspect?: string; targetLength?: string };
     idea = body.idea?.trim() ?? "";
     provider = body.provider ?? "simulated";
-    aspect = body.aspect ?? "16:9";
+    aspect = body.aspect ?? "9:16";
     targetLength = body.targetLength ?? "5s";
   } catch {
     /* fall through to validation */
