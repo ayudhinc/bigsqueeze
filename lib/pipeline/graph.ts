@@ -6,7 +6,7 @@ import { writeShotPrompt } from "@/lib/agents/promptSmith";
 import { designSound } from "@/lib/agents/soundDesigner";
 import { composeScore } from "@/lib/agents/composer";
 import { gradeShot } from "@/lib/agents/colorist";
-import { critiqueShot } from "@/lib/agents/critic";
+import { editFilm } from "@/lib/agents/critic";
 import { getVideoProvider, type VideoProvider } from "@/lib/providers/video";
 
 /* ──────────────────────────────────────────────────────────────────────────
@@ -188,10 +188,10 @@ export function createFilmGraph(emit: (e: PipelineEvent) => void, provider?: Vid
   /* ── 4. Editor — final critique & manifest ───────────────────────────── */
   async function editor(st: St): Promise<Up> {
     emit({ type: "agent", agent: "Editor", status: "start" });
-    const lastShot = st.shots[st.shots.length - 1];
-    const review = lastShot
-      ? await critiqueShot(lastShot, `${style(st)} — final cut`)
-      : { ok: true, note: "Assembly complete." };
+    const allShots = st.shots;
+    const notes = allShots.length
+      ? await editFilm(allShots, st.shotResults)
+      : { pace: "", transitions: "", note: "No shots produced." };
 
     const manifest: FilmManifest = {
       logline: st.treatment!.logline,
@@ -201,10 +201,11 @@ export function createFilmGraph(emit: (e: PipelineEvent) => void, provider?: Vid
         render: st.shotResults[shot.id]?.render,
       })),
       provider: _provider.name,
+      editNote: `${notes.pace} ${notes.transitions} ${notes.note}`,
       createdAt: new Date().toISOString(),
     };
 
-    emit({ type: "agent", agent: "Editor", status: "done", message: review.note });
+    emit({ type: "agent", agent: "Editor", status: "done", message: notes.note });
     emit({ type: "film", manifest });
     return { manifest };
   }

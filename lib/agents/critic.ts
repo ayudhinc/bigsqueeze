@@ -1,27 +1,34 @@
 import { z } from "zod";
 import type { ShotSpec } from "@/lib/pipeline/types";
+import type { ShotResult } from "@/lib/pipeline/graph";
 import { genObject, hasLLM } from "@/lib/providers/llm";
 
-const NoteSchema = z.object({
-  ok: z.boolean(),
+const EditNotesSchema = z.object({
+  pace: z.string(),
+  transitions: z.string(),
   note: z.string(),
 });
 
-/** Critic agent: reviews a shot's prompt; ok=true praise, ok=false one-line fix. */
-export async function critiqueShot(
-  shot: ShotSpec,
-  prompt: string,
-): Promise<{ ok: boolean; note: string }> {
+/** Editor agent: reviews all produced shots → pacing, transitions, final note. */
+export async function editFilm(
+  shots: ShotSpec[],
+  _results: Record<string, ShotResult>,
+): Promise<{ pace: string; transitions: string; note: string }> {
   if (hasLLM()) {
+    const descs = shots
+      .map((s, i) => `Shot ${i + 1} (${s.durationSec}s, ${s.camera}, ${s.mood}): ${s.description}`)
+      .join("\n");
     return genObject(
-      NoteSchema,
-      `Critique this shot prompt for clarity and visual impact. If strong, ok=true with a one-line compliment. If weak, cliché, or unfilmable, ok=false with a one-line fix.\n\nShot: ${shot.description}\nPrompt: ${prompt}`,
-      "You are a tough but fair film critic. Respond in one sentence.",
+      EditNotesSchema,
+      `Review this film cut and provide edit notes.\n\n${descs}\n\nPace: one line about overall rhythm and timing.\nTransitions: how shots flow together.\nNote: one-line final assessment.`,
+      "You are a film editor. Be precise about pacing and continuity.",
       "editor",
     );
   }
+  const total = shots.reduce((s, x) => s + x.durationSec, 0);
   return {
-    ok: true,
-    note: `Reads clean — the ${shot.mood} ${shot.camera} suits beat ${shot.index + 1}.`,
+    pace: `${shots.length} shots, ${total}s total — steady rhythm across beats.`,
+    transitions: `${shots[0]?.camera ?? "cuts"} opening, ${shots[shots.length - 1]?.camera ?? "cuts"} closing.`,
+    note: "Assembly complete. Clean edit with coherent visual flow.",
   };
 }

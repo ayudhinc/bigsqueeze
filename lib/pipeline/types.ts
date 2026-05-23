@@ -46,5 +46,6 @@ export type FilmManifest = {
     render?: ShotRender;
   }>;
   provider: string;
+  editNote?: string;
   createdAt: string;
 };
