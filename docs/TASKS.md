@@ -46,6 +46,15 @@ On-disk source of truth for the build sequence. Check items off as we go.
 - [x] Wire Studio to real pipeline (`/studio` runs `POST /api/direct` when `mode="live"`)
 - [x] Final film player + download
 
+## 6.1 Demo UI quality fixes
+- [ ] Timing: shots render too fast (1.9s each, 7 steps at 180ms) — slow down to feel like real generation
+- [ ] Render progress: `scale(1 + scrub*0.04)` at 4% max zoom is imperceptible — use visible progress bar or overlay
+- [ ] Phase indicator: show current stage (planning → producing → mixing → editing) in the UI
+- [ ] Editor note text mismatch: says "ProRes 422 HQ + H.264" but output is MP4
+- [ ] Playhead static during planning — should show some activity
+- [ ] Filmstrip empty during planning/mixing/editing — should light up progressively
+- [ ] Unmount safety: timer chain not cleaned up if component unmounts mid-demo
+
 ## 7. Real LTX-2
 - [x] Wire chosen provider (fal or runpod) end-to-end [needs keys]
 - [x] Provider dropdown in Studio UI (simulated / fal/seedance-2.0 / fal/ltx-2 / runpod/ltx-2 disabled)
