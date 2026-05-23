@@ -2,8 +2,6 @@ import { generateObject, generateText } from "ai";
 import { createOpenAI } from "@ai-sdk/openai";
 import { z } from "zod/v4";
 
-const TIMEOUT_MS = 60_000;
-
 /* ── Provider selection ───────────────────────────────────────────────────
    Three modes, controlled by LLM_PROVIDER:
      "gateway" (default) → AI Gateway: model string "provider/model"

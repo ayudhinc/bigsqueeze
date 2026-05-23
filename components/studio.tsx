@@ -219,7 +219,7 @@ export function Studio({ tweaks, mode = "demo" }: { tweaks: Tweaks; mode?: "demo
     setPhase("idle");
   }, []);
 
-  function streamNote(fromId: string, body: string, delay = 0) {
+  const streamNote = useCallback((fromId: string, body: string, delay = 0) => {
     if (typeRef.current) clearInterval(typeRef.current);
     schedule(() => {
       const agent = AGENTS.find((a) => a.id === fromId) ?? AGENTS[0];
@@ -236,7 +236,7 @@ export function Studio({ tweaks, mode = "demo" }: { tweaks: Tweaks; mode?: "demo
         }
       }, 22);
     }, delay);
-  }
+  }, []);
 
   /* demo phase machine */
   useEffect(() => {
@@ -300,7 +300,7 @@ export function Studio({ tweaks, mode = "demo" }: { tweaks: Tweaks; mode?: "demo
         setPhase("done");
       }, 3200);
     }
-  }, [phase, isDemo]);
+  }, [phase, isDemo, streamNote]);
 
   /* ── LIVE: real pipeline via SSE ────────────────────────────────────── */
   const startLive = useCallback(async () => {
@@ -350,6 +350,7 @@ export function Studio({ tweaks, mode = "demo" }: { tweaks: Tweaks; mode?: "demo
       setPipelineError(msg);
       setPhase("done");
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [logline]);
 
   /* pipeline event → Studio state */
@@ -445,8 +446,6 @@ export function Studio({ tweaks, mode = "demo" }: { tweaks: Tweaks; mode?: "demo
   }, [phase]);
 
   /* ── derived display values ─────────────────────────────────────────── */
-  const isGenerating = phase !== "idle" && phase !== "done" && phase !== "running";
-
   const stripCells = useMemo(() => {
     if (isDemo) {
       return DEMO_SHOTS.slice(0, 8).map((s, i) => ({
