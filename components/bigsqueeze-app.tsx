@@ -40,7 +40,7 @@ export function BigSqueezeApp() {
     <>
       <Nav />
       <Hero tweaks={tweaks} />
-      <div className="shell"><Studio tweaks={tweaks} mode="preview" /></div>
+      <Studio tweaks={tweaks} mode="preview" />
       <HowItWorks />
       <Films />
       <Waitlist />
