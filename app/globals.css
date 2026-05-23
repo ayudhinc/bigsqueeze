@@ -209,6 +209,8 @@ section { position: relative; }
   background-clip: text;
   color: transparent;
   font-style: italic;
+  line-height: 1.15;
+  display: inline-block;
 }
 .hero__sub {
   font-size: 16px;
@@ -317,6 +319,7 @@ section { position: relative; }
   cursor: pointer;
   outline: none;
 }
+.studio__right .provider-select { width: auto; }
 .provider-select:focus { border-color: var(--c-shot); }
 .provider-select:disabled { opacity: 0.4; cursor: not-allowed; }
 .provider-select option { background: oklch(11% 0.012 250); color: var(--text); }

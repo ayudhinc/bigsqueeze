@@ -487,21 +487,32 @@ export function Studio({ tweaks, mode = "demo" }: { tweaks: Tweaks; mode?: "demo
     <div className="studio">
       {/* CHROME */}
       <div className="studio__chrome">
-        <div className="lights"><b /><b /><b /></div>
-        <div className="studio__path">
-          <b>FilmWrite</b>
-          <span style={{ color: "var(--text-dim)" }}>/</span>
-          <em>{tweaks.projectName?.toLowerCase().replace(/\s+/g, "_") || "untitled"}</em>
-          <span style={{ color: "var(--text-dim)" }}>/</span>
-          <span>cut_v04.fwf</span>
+          <div className="lights"><b /><b /><b /></div>
+          <div className="studio__path">
+            <b>FilmWrite</b>
+            <span style={{ color: "var(--text-dim)" }}>/</span>
+            <em>{tweaks.projectName?.toLowerCase().replace(/\s+/g, "_") || "untitled"}</em>
+            <span style={{ color: "var(--text-dim)" }}>/</span>
+            <span>cut_v04.fwf</span>
+          </div>
+          <div className="studio__right">
+            <span>{completedShots.length}/{shotCount} shots</span>
+            <span>·</span>
+            <span>24 fps</span>
+            <select
+              className="provider-select"
+              value={provider}
+              onChange={(e) => setProvider(e.target.value)}
+              disabled={phase !== "idle" && phase !== "done"}
+            >
+              <option value="simulated">Simulated</option>
+              <option value="fal/seedance-2.0">Seedance 2.0</option>
+              <option value="fal/ltx-2">LTX-2</option>
+              <option value="runpod/ltx-2" disabled>Runpod</option>
+            </select>
+            <span className="live-chip"><i />{phaseLabel}</span>
+          </div>
         </div>
-        <div className="studio__right">
-          <span>{completedShots.length}/{shotCount} shots</span>
-          <span>·</span>
-          <span>24 fps</span>
-          <span className="live-chip"><i />{phaseLabel}</span>
-        </div>
-      </div>
 
       {/* TOOLBAR */}
       <div className="studio__bar">
@@ -615,20 +626,6 @@ export function Studio({ tweaks, mode = "demo" }: { tweaks: Tweaks; mode?: "demo
                     </>
                   )}
           </div>
-        </div>
-        <div className="bar-block">
-          <span className="label">Provider</span>
-          <select
-            className="provider-select"
-            value={provider}
-            onChange={(e) => setProvider(e.target.value)}
-            disabled={phase !== "idle" && phase !== "done"}
-          >
-            <option value="simulated">Simulated (keyless)</option>
-            <option value="fal/seedance-2.0">fal/seedance-2.0</option>
-            <option value="fal/ltx-2">fal/ltx-2</option>
-            <option value="runpod/ltx-2" disabled>runpod/ltx-2</option>
-          </select>
         </div>
       </div>
           </div>
