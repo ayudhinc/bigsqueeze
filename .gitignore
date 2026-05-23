@@ -23,6 +23,7 @@ build/
 # generated demo output
 /public/renders/*
 !/public/renders/.gitkeep
+/public/*.mp4
 storage/
 
 # logs
