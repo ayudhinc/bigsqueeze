@@ -37,13 +37,13 @@ On-disk source of truth for the build sequence. Check items off as we go.
 - [x] Studio route (`/studio`) with agent feed + timeline UI (scripted sim, not yet wired)
 
 ## 5. Assembly
-- [ ] ffmpeg concat + audio mux → `film.mp4`
-- [ ] Output `manifest.json` (shots, prompts, providers, timings)
+- [x] ffmpeg concat + audio mux → `film.mp4`
+- [x] Output `manifest.json` (shots, prompts, providers, timings)
 
 ## 6. UI (the demo)
 - [x] Input: logline/script (Studio logline bar + preset suggestions)
 - [x] Live timeline: agent feed + per-shot render cards (queued→rendering→ready)
-- [ ] Wire Studio to real pipeline (`/studio` still runs scripted sim, not `POST /api/direct`)
+- [x] Wire Studio to real pipeline (`/studio` runs `POST /api/direct` when `mode="live"`)
 - [ ] Final film player + download
 
 ## 7. Real LTX-2

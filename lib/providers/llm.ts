@@ -91,7 +91,7 @@ function supportsJsonSchema(modelName: string): boolean {
 /* ── Rate-limit retry wrapper ────────────────────────────────────────────── */
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-async function withRetry<T>(fn: () => Promise<T>, retries = 3): Promise<T> {
+async function withRetry<T>(fn: () => Promise<T>, retries = 5): Promise<T> {
   for (let attempt = 0; ; attempt++) {
     try {
       return await fn();
@@ -104,7 +104,7 @@ async function withRetry<T>(fn: () => Promise<T>, retries = 3): Promise<T> {
         msg.includes("Too Many Requests")
       ) {
         const match = msg.match(/try again in ([\d.]+)s/);
-        const delay = match ? Number(match[1]) * 1000 + 500 : Math.min(1000 * 2 ** attempt, 15_000);
+        const delay = match ? Number(match[1]) * 1000 + 3000 : Math.min(1000 * 2 ** attempt, 15_000);
         await sleep(delay);
         continue;
       }

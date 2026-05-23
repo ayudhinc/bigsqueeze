@@ -1,5 +1,6 @@
 import type { PipelineEvent } from "./types";
 import { createFilmGraph } from "./graph";
+import { assembleFilm } from "@/lib/ffmpeg/assemble";
 
 type GraphResult = { ok: true } | { ok: false; error: Error };
 
@@ -9,7 +10,7 @@ type GraphResult = { ok: true } | { ok: false; error: Error };
  *
  * Graph topology:
  *   Screenwriter → Director → [per shot: Cinematographer → Renderer →
- *   Post-production (Sound+Score+Color in parallel) → QC retry loop] →
+ *   Post-production (Sound+Score+Color sequential) → QC retry loop] →
  *   Editor → done
  */
 export async function* runPipeline(idea: string): AsyncGenerator<PipelineEvent> {
@@ -38,5 +39,14 @@ export async function* runPipeline(idea: string): AsyncGenerator<PipelineEvent> 
   if (!result.ok) {
     yield { type: "error", message: result.error.message };
     throw result.error;
+  }
+
+  /* ── Post-graph: ffmpeg assembly ─────────────────────────────────────── */
+  const filmEvent = events.findLast(
+    (e): e is Extract<PipelineEvent, { type: "film" }> => e.type === "film",
+  );
+  if (filmEvent) {
+    const url = assembleFilm(filmEvent.manifest);
+    yield { type: "film", url, manifest: filmEvent.manifest };
   }
 }
