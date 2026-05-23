@@ -40,7 +40,7 @@ export function FilmWriteApp() {
     <>
       <Nav />
       <Hero tweaks={tweaks} />
-      <Studio tweaks={tweaks} mode="demo" />
+      <Studio tweaks={tweaks} mode="preview" />
       <HowItWorks />
       <Films />
       <Waitlist />

@@ -159,7 +159,8 @@ function LiveShotFrame({ url, alt }: { url: string; alt: string }) {
 
 /* ── Main Studio ───────────────────────────────────────────────────────── */
 
-export function Studio({ tweaks, mode = "demo" }: { tweaks: Tweaks; mode?: "demo" | "live" }) {
+export function Studio({ tweaks, mode = "demo" }: { tweaks: Tweaks; mode?: "demo" | "live" | "preview" }) {
+  const isPreview = mode === "preview";
   const isDemo = mode === "demo";
 
   const [phase, setPhase] = useState<Phase>("idle");
@@ -243,7 +244,7 @@ export function Studio({ tweaks, mode = "demo" }: { tweaks: Tweaks; mode?: "demo
 
   /* demo phase machine */
   useEffect(() => {
-    if (!isDemo || phase === "idle") return;
+    if (isPreview || !isDemo || phase === "idle") return;
 
     if (phase === "planning") {
       setActiveAgents({ writer: true, director: true });
@@ -429,12 +430,14 @@ export function Studio({ tweaks, mode = "demo" }: { tweaks: Tweaks; mode?: "demo
 
   const handleSubmit = useCallback((e: React.FormEvent) => {
     e.preventDefault();
+    if (isPreview) return;
     if (isDemo) startDemo();
     else startLive();
-  }, [isDemo, startDemo, startLive]);
+  }, [isPreview, isDemo, startDemo, startLive]);
 
   /* ── TC ticker ──────────────────────────────────────────────────────── */
   useEffect(() => {
+    if (isPreview) return;
     let id: ReturnType<typeof setInterval> | undefined;
     if (phase !== "idle") {
       const t0 = Date.now();
@@ -451,6 +454,7 @@ export function Studio({ tweaks, mode = "demo" }: { tweaks: Tweaks; mode?: "demo
 
   /* ── derived display values ─────────────────────────────────────────── */
   const stripCells = useMemo(() => {
+    if (isPreview) return [];
     if (isDemo) {
       return DEMO_SHOTS.slice(0, 8).map((s, i) => ({
         id: s.id,
@@ -516,13 +520,13 @@ export function Studio({ tweaks, mode = "demo" }: { tweaks: Tweaks; mode?: "demo
               onChange={(e) => setLogline(e.target.value)}
               placeholder="A getaway driver gets one last job — but the cargo is alive."
             />
-            <button type="submit" disabled={!logline.trim() || (phase !== "idle" && phase !== "done")}>
+            <button type="submit" disabled={isPreview || !logline.trim() || (phase !== "idle" && phase !== "done")}>
               {phase === "idle" || phase === "done" ? "GENERATE" : "RUNNING\u2026"}
             </button>
           </form>
           <div className="suggest">
             {PRESETS.map((p, i) => (
-              <button key={i} type="button" onClick={() => setLogline(p)}>
+              <button key={i} type="button" onClick={() => !isPreview && setLogline(p)}>
                 {p.slice(0, 48)}{p.length > 48 ? "\u2026" : ""}
               </button>
             ))}
@@ -532,10 +536,10 @@ export function Studio({ tweaks, mode = "demo" }: { tweaks: Tweaks; mode?: "demo
           <span className="label">Transport</span>
           <div className="transport">
             <span className="tc">{tc} <b>·</b> 24</span>
-            <button title="Reset" type="button" onClick={reset}>
+            <button title="Reset" type="button" onClick={reset} disabled={isPreview}>
               <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor"><path d="M3 1L0 5l3 4V6h7V4H3z" /></svg>
             </button>
-            <button className="play" title="Generate" type="button" onClick={() => isDemo ? startDemo() : startLive()} disabled={phase !== "idle" && phase !== "done"}>
+            <button className="play" title="Generate" type="button" onClick={() => isDemo ? startDemo() : startLive()} disabled={isPreview || (phase !== "idle" && phase !== "done")}>
               <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor"><path d="M2 0v10l8-5z" /></svg>
             </button>
           </div>
