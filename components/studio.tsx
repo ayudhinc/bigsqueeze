@@ -520,8 +520,11 @@ export function Studio({ tweaks, mode = "demo" }: { tweaks: Tweaks; mode?: "demo
       <div className="studio__bar">
         <div className="bar-block">
           <span className="label">Project</span>
-          <div className="value"><b>{tweaks.projectName || "Untitled"}</b> · 24p</div>
-          <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
+          <div className="value"><b>{tweaks.projectName || "Untitled"}</b> · {aspect} · 24p</div>
+          <div className="value" style={{ color: "var(--text-dim)", marginTop: 4 }}>
+            Target runtime · {targetLength}
+          </div>
+          <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
             <select
               className="provider-select"
               value={aspect}
