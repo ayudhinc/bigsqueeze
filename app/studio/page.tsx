@@ -19,7 +19,7 @@ export default function StudioPage() {
               Studio
             </h1>
           </div>
-          <Studio tweaks={{
+          <Studio mode="live" tweaks={{
             accent: "#f0a04c",
             headline_lead: "",
             headline_emph: "",

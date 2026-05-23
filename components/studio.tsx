@@ -1,18 +1,20 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import { AGENTS, PRESETS } from "@/lib/filmwrite-data";
 import type { Tweaks } from "@/components/tweaks-panel";
+import type { PipelineEvent, ShotSpec, ShotRender } from "@/lib/pipeline/types";
 
 /* ────────────────────────────────────────────────────────────────────────────
-   STUDIO — the live "control room" (DAW-inspired), matched to the landing-page
-   design system and fully responsive from 1440px down to 360px.
+   STUDIO — live "control room" (DAW-inspired).
+   mode="demo"  → scripted simulation (landing page eye candy).
+   mode="live"  → real pipeline via POST /api/direct SSE stream.
    ──────────────────────────────────────────────────────────────────────────── */
 
-type Phase = "idle" | "planning" | "producing" | "mixing" | "editing" | "done";
+type Phase = "idle" | "planning" | "producing" | "mixing" | "editing" | "done" | "running";
 
-type Shot = {
+type DemoShot = {
   id: string;
   code: string;
   name: string;
@@ -20,6 +22,12 @@ type Shot = {
   duration: number;
   bg: string;
   elements: ReactNode;
+};
+
+type LiveShot = {
+  spec: ShotSpec;
+  status: "queued" | "rendering" | "ready" | "failed";
+  render?: ShotRender;
 };
 
 type NoteState = {
@@ -30,7 +38,7 @@ type NoteState = {
   typing: boolean;
 } | null;
 
-const SHOTS: Shot[] = [
+const DEMO_SHOTS: DemoShot[] = [
   {
     id: "s1", code: "01A", name: "EXT. NEON ALLEY — NIGHT",
     desc: "Wide shot. Rain. Reflections in puddles. Distant siren.",
@@ -112,16 +120,16 @@ const SHOTS: Shot[] = [
   },
 ];
 
-const TIMELINE_TRACKS = [
-  { id: "story", name: "Story", c: "var(--c-story)" },
-  { id: "v1", name: "V1 \u00B7 Shots", c: "var(--c-shot)" },
-  { id: "v2", name: "V2 \u00B7 B-Roll", c: "var(--c-shot)" },
-  { id: "a1", name: "A1 \u00B7 Dialogue", c: "var(--c-sound)" },
-  { id: "a2", name: "A2 \u00B7 Foley", c: "var(--c-sound)" },
-  { id: "a3", name: "A3 \u00B7 Score", c: "var(--c-music)" },
-];
+const AGENT_MAP: Record<string, string> = {
+  Writer: "writer",
+  "Shot Designer": "director",
+  "Prompt Smith": "dp",
+  Critic: "editor",
+};
 
-function ShotFrame({ shot, scrub = 0 }: { shot: Shot | null; scrub?: number }) {
+/* ── Shared sub-components ─────────────────────────────────────────────── */
+
+function DemoShotFrame({ shot, scrub = 0 }: { shot: DemoShot | null; scrub?: number }) {
   if (!shot) return null;
   return (
     <div
@@ -138,9 +146,23 @@ function ShotFrame({ shot, scrub = 0 }: { shot: Shot | null; scrub?: number }) {
   );
 }
 
-export function Studio({ tweaks }: { tweaks: Tweaks }) {
+function LiveShotFrame({ url, alt }: { url: string; alt: string }) {
+  return (
+    <div className="preview__frame" style={{ display: "grid", placeItems: "center", background: "#000" }}>
+      <img src={url} alt={alt} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+    </div>
+  );
+}
+
+/* ── Main Studio ───────────────────────────────────────────────────────── */
+
+export function Studio({ tweaks, mode = "demo" }: { tweaks: Tweaks; mode?: "demo" | "live" }) {
+  const isDemo = mode === "demo";
+
   const [phase, setPhase] = useState<Phase>("idle");
   const [logline, setLogline] = useState("");
+
+  /* demo-mode state */
   const [activeShotIdx, setActiveShotIdx] = useState(0);
   const [completedShots, setCompletedShots] = useState<string[]>([]);
   const [renderPct, setRenderPct] = useState(0);
@@ -150,13 +172,19 @@ export function Studio({ tweaks }: { tweaks: Tweaks }) {
   const [note, setNote] = useState<NoteState>(null);
   const [tc, setTc] = useState("00:00:00:00");
 
+  /* live-mode state */
+  const [liveShots, setLiveShots] = useState<LiveShot[]>([]);
+  const [pipelineError, setPipelineError] = useState<string | null>(null);
+
   const timerRef = useRef<ReturnType<typeof setTimeout>[]>([]);
   const typeRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     setLogline((l) => l || PRESETS[0]);
   }, []);
 
+  /* helpers */
   function schedule(fn: () => void, ms: number) {
     timerRef.current.push(setTimeout(fn, ms));
   }
@@ -165,6 +193,7 @@ export function Studio({ tweaks }: { tweaks: Tweaks }) {
     timerRef.current.forEach(clearTimeout);
     timerRef.current = [];
     if (typeRef.current) clearInterval(typeRef.current);
+    if (abortRef.current) { abortRef.current.abort(); abortRef.current = null; }
     setActiveShotIdx(0);
     setCompletedShots([]);
     setRenderPct(0);
@@ -172,17 +201,20 @@ export function Studio({ tweaks }: { tweaks: Tweaks }) {
     setActiveAgents({});
     setDoneAgents({});
     setNote(null);
+    setPipelineError(null);
+    setLiveShots([]);
   }
 
-  function start() {
+  /* ── DEMO: scripted simulation ─────────────────────────────────────── */
+  const startDemo = useCallback(() => {
     clearAll();
     setPhase("planning");
-  }
+  }, []);
 
-  function reset() {
+  const reset = useCallback(() => {
     clearAll();
     setPhase("idle");
-  }
+  }, []);
 
   function streamNote(fromId: string, body: string, delay = 0) {
     if (typeRef.current) clearInterval(typeRef.current);
@@ -203,8 +235,9 @@ export function Studio({ tweaks }: { tweaks: Tweaks }) {
     }, delay);
   }
 
+  /* demo phase machine */
   useEffect(() => {
-    if (phase === "idle") return;
+    if (!isDemo || phase === "idle") return;
 
     if (phase === "planning") {
       setActiveAgents({ writer: true, director: true });
@@ -219,7 +252,7 @@ export function Studio({ tweaks }: { tweaks: Tweaks }) {
 
     if (phase === "producing") {
       setActiveAgents((a) => ({ ...a, director: true, dp: true }));
-      SHOTS.forEach((shot, i) => {
+      DEMO_SHOTS.forEach((shot, i) => {
         const base = i * 1900;
         schedule(() => {
           setActiveShotIdx(i);
@@ -231,10 +264,10 @@ export function Studio({ tweaks }: { tweaks: Tweaks }) {
         });
         schedule(() => {
           setCompletedShots((c) => [...c, shot.id]);
-          setPlayhead(Math.min(100, ((i + 1) / SHOTS.length) * 60));
+          setPlayhead(Math.min(100, ((i + 1) / DEMO_SHOTS.length) * 60));
         }, base + 1700);
       });
-      const total = SHOTS.length * 1900;
+      const total = DEMO_SHOTS.length * 1900;
       schedule(() => {
         setDoneAgents((d) => ({ ...d, director: true, dp: true }));
         setActiveAgents((a) => ({ ...a, director: false, dp: false }));
@@ -264,8 +297,135 @@ export function Studio({ tweaks }: { tweaks: Tweaks }) {
         setPhase("done");
       }, 3200);
     }
-  }, [phase]);
+  }, [phase, isDemo]);
 
+  /* ── LIVE: real pipeline via SSE ────────────────────────────────────── */
+  const startLive = useCallback(async () => {
+    clearAll();
+    setPhase("running");
+
+    const ac = new AbortController();
+    abortRef.current = ac;
+
+    try {
+      const res = await fetch("/api/direct", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ idea: logline }),
+        signal: ac.signal,
+      });
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error((body as { error?: string }).error || `HTTP ${res.status}`);
+      }
+
+      const reader = res.body!.getReader();
+      const decoder = new TextDecoder();
+      let buf = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+
+        const lines = buf.split("\n");
+        buf = lines.pop() || "";
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed.startsWith("data: ")) continue;
+          try {
+            const event = JSON.parse(trimmed.slice(6)) as PipelineEvent;
+            handleEvent(event);
+          } catch { /* skip malformed */ }
+        }
+      }
+    } catch (err: unknown) {
+      if (ac.signal.aborted) return;
+      const msg = (err as Error).message;
+      setPipelineError(msg);
+      setPhase("done");
+    }
+  }, [logline]);
+
+  /* pipeline event → Studio state */
+  function handleEvent(event: PipelineEvent) {
+    switch (event.type) {
+      case "agent": {
+        const agentId = AGENT_MAP[event.agent];
+        if (!agentId) break;
+        if (event.status === "start") {
+          setActiveAgents((a) => ({ ...a, [agentId]: true }));
+          if (event.message) streamNoteFromAgent(agentId, event.message);
+        } else {
+          setDoneAgents((d) => ({ ...d, [agentId]: true }));
+          setActiveAgents((a) => ({ ...a, [agentId]: false }));
+          if (event.message) streamNoteFromAgent(agentId, event.message);
+        }
+        break;
+      }
+      case "treatment":
+        streamNoteFromAgent("writer", `Treatment drafted: ${event.treatment.synopsis.slice(0, 120)}`);
+        break;
+      case "shots":
+        setLiveShots(event.shots.map((s: ShotSpec) => ({ spec: s, status: "queued" as const })));
+        streamNoteFromAgent("director", `${event.shots.length} shots planned for this treatment.`);
+        break;
+      case "shot": {
+        setLiveShots((prev) =>
+          prev.map((ls) =>
+            ls.spec.id === event.shotId
+              ? { ...ls, status: event.status, render: event.render ?? ls.render }
+              : ls,
+          ),
+        );
+        if (event.status === "rendering") {
+          const idx = liveShots.findIndex((ls) => ls.spec.id === event.shotId);
+          if (idx >= 0) setActiveShotIdx(idx);
+        }
+        if (event.status === "ready") {
+          setCompletedShots((c) => [...c, event.shotId]);
+          setPlayhead((prev) => Math.min(100, prev + 10));
+        }
+        break;
+      }
+      case "film":
+        setPhase("done");
+        streamNoteFromAgent("editor", "All shots complete. Master assembled.");
+        setPlayhead(100);
+        break;
+      case "error":
+        streamNoteFromAgent("editor", `Error: ${event.message}`);
+        setPipelineError(event.message);
+        break;
+    }
+  }
+
+  function streamNoteFromAgent(agentId: string, body: string) {
+    if (typeRef.current) clearInterval(typeRef.current);
+    const agent = AGENTS.find((a) => a.id === agentId) ?? AGENTS[0];
+    const tStamp = new Date().toLocaleTimeString("en-GB", { hour12: false });
+    setNote({ from: agent, body: "", target: body, time: tStamp, typing: true });
+    let i = 0;
+    typeRef.current = setInterval(() => {
+      i += Math.max(1, Math.floor(body.length / 60));
+      if (i >= body.length) {
+        setNote((n) => (n ? { ...n, body, typing: false } : null));
+        if (typeRef.current) clearInterval(typeRef.current);
+      } else {
+        setNote((n) => (n ? { ...n, body: body.slice(0, i) } : null));
+      }
+    }, 22);
+  }
+
+  const handleSubmit = useCallback((e: React.FormEvent) => {
+    e.preventDefault();
+    if (isDemo) startDemo();
+    else startLive();
+  }, [isDemo, startDemo, startLive]);
+
+  /* ── TC ticker ──────────────────────────────────────────────────────── */
   useEffect(() => {
     let id: ReturnType<typeof setInterval> | undefined;
     if (phase !== "idle") {
@@ -278,32 +438,46 @@ export function Studio({ tweaks }: { tweaks: Tweaks }) {
     } else {
       setTc("00:00:00:00");
     }
-    return () => {
-      if (id) clearInterval(id);
-    };
+    return () => { if (id) clearInterval(id); };
   }, [phase]);
 
-  const stripCells = useMemo(
-    () =>
-      SHOTS.slice(0, 8).map((s, i) => ({
-        ...s,
+  /* ── derived display values ─────────────────────────────────────────── */
+  const isGenerating = phase !== "idle" && phase !== "done" && phase !== "running";
+
+  const stripCells = useMemo(() => {
+    if (isDemo) {
+      return DEMO_SHOTS.slice(0, 8).map((s, i) => ({
+        id: s.id,
+        code: s.code,
+        bg: s.bg,
         done: completedShots.includes(s.id),
         isCurrent: phase === "producing" && i === activeShotIdx,
-      })),
-    [completedShots, activeShotIdx, phase],
-  );
+        isEmpty: !completedShots.includes(s.id) && !(phase === "producing" && i === activeShotIdx),
+      }));
+    }
+    return liveShots.map((ls, i) => ({
+      id: ls.spec.id,
+      code: String(i + 1).padStart(2, "0"),
+      bg: "",
+      done: ls.status === "ready" || ls.status === "failed",
+      isCurrent: ls.status === "rendering",
+      isEmpty: ls.status === "queued",
+    }));
+  }, [isDemo, completedShots, activeShotIdx, phase, liveShots]);
 
-  const currentShot = phase === "idle" ? null : SHOTS[Math.min(activeShotIdx, SHOTS.length - 1)];
+  const shotCount = isDemo ? DEMO_SHOTS.length : liveShots.length;
+
+  /* current preview shot */
+  const demoCurrentShot = phase === "idle" ? null : DEMO_SHOTS[Math.min(activeShotIdx, DEMO_SHOTS.length - 1)];
+  const liveCurrentShot = liveShots[Math.min(activeShotIdx, liveShots.length - 1)];
+
+  const phaseLabel = phase === "running" ? "RUNNING" : phase === "idle" ? "READY" : phase.toUpperCase();
 
   return (
     <div className="studio">
       {/* CHROME */}
       <div className="studio__chrome">
-        <div className="lights">
-          <b />
-          <b />
-          <b />
-        </div>
+        <div className="lights"><b /><b /><b /></div>
         <div className="studio__path">
           <b>FilmWrite</b>
           <span style={{ color: "var(--text-dim)" }}>/</span>
@@ -312,15 +486,10 @@ export function Studio({ tweaks }: { tweaks: Tweaks }) {
           <span>cut_v04.fwf</span>
         </div>
         <div className="studio__right">
-          <span>
-            {stripCells.filter((c) => c.done).length}/{SHOTS.length} shots
-          </span>
+          <span>{completedShots.length}/{shotCount} shots</span>
           <span>·</span>
           <span>24 fps</span>
-          <span className="live-chip">
-            <i />
-            {phase === "idle" ? "READY" : phase.toUpperCase()}
-          </span>
+          <span className="live-chip"><i />{phaseLabel}</span>
         </div>
       </div>
 
@@ -328,22 +497,14 @@ export function Studio({ tweaks }: { tweaks: Tweaks }) {
       <div className="studio__bar">
         <div className="bar-block">
           <span className="label">Project</span>
-          <div className="value">
-            <b>{tweaks.projectName || "Untitled"}</b> · 16:9 · 24p
-          </div>
+          <div className="value"><b>{tweaks.projectName || "Untitled"}</b> · 16:9 · 24p</div>
           <div className="value" style={{ color: "var(--text-dim)", marginTop: 4 }}>
             Target runtime · 4–6 min
           </div>
         </div>
         <div className="bar-block">
           <span className="label">Logline</span>
-          <form
-            className="logline-input"
-            onSubmit={(e) => {
-              e.preventDefault();
-              start();
-            }}
-          >
+          <form className="logline-input" onSubmit={handleSubmit}>
             <input
               value={logline}
               onChange={(e) => setLogline(e.target.value)}
@@ -356,8 +517,7 @@ export function Studio({ tweaks }: { tweaks: Tweaks }) {
           <div className="suggest">
             {PRESETS.map((p, i) => (
               <button key={i} type="button" onClick={() => setLogline(p)}>
-                {p.slice(0, 48)}
-                {p.length > 48 ? "\u2026" : ""}
+                {p.slice(0, 48)}{p.length > 48 ? "\u2026" : ""}
               </button>
             ))}
           </div>
@@ -365,18 +525,12 @@ export function Studio({ tweaks }: { tweaks: Tweaks }) {
         <div className="bar-block">
           <span className="label">Transport</span>
           <div className="transport">
-            <span className="tc">
-              {tc} <b>·</b> 24
-            </span>
+            <span className="tc">{tc} <b>·</b> 24</span>
             <button title="Reset" type="button" onClick={reset}>
-              <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor">
-                <path d="M3 1L0 5l3 4V6h7V4H3z" />
-              </svg>
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor"><path d="M3 1L0 5l3 4V6h7V4H3z" /></svg>
             </button>
-            <button className="play" title="Generate" type="button" onClick={start} disabled={phase !== "idle" && phase !== "done"}>
-              <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor">
-                <path d="M2 0v10l8-5z" />
-              </svg>
+            <button className="play" title="Generate" type="button" onClick={() => isDemo ? startDemo() : startLive()} disabled={phase !== "idle" && phase !== "done"}>
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor"><path d="M2 0v10l8-5z" /></svg>
             </button>
           </div>
         </div>
@@ -387,9 +541,7 @@ export function Studio({ tweaks }: { tweaks: Tweaks }) {
         {/* AGENTS */}
         <div className="panel">
           <div className="panel__head">
-            <span className="panel__title">
-              Agents <span className="num">{AGENTS.length}</span>
-            </span>
+            <span className="panel__title">Agents <span className="num">{AGENTS.length}</span></span>
             <span className="label">Swarm</span>
           </div>
           <div className="panel__body">
@@ -420,34 +572,36 @@ export function Studio({ tweaks }: { tweaks: Tweaks }) {
         <div className="panel preview">
           <div className="panel__head" style={{ background: "oklch(10% 0.01 250)" }}>
             <span className="panel__title">Preview · Program</span>
-            <span className="label">{currentShot ? `${currentShot.code} · ${currentShot.duration}s` : "Awaiting input"}</span>
+            <span className="label">
+              {isDemo
+                ? demoCurrentShot ? `${demoCurrentShot.code} · ${demoCurrentShot.duration}s` : "Awaiting input"
+                : liveCurrentShot ? `Shot ${liveCurrentShot.spec.index + 1} · ${liveCurrentShot.spec.durationSec}s` : "Awaiting input"}
+            </span>
           </div>
           <div className="preview__viewport cinebars">
-            {currentShot && <ShotFrame shot={currentShot} scrub={renderPct / 100} />}
-            {!currentShot && <div className="preview__placeholder">— No signal · paste a logline to begin —</div>}
+            {isDemo && demoCurrentShot && <DemoShotFrame shot={demoCurrentShot} scrub={renderPct / 100} />}
+            {!isDemo && liveCurrentShot?.render && <LiveShotFrame url={liveCurrentShot.render.url} alt={liveCurrentShot.spec.description} />}
+            {!demoCurrentShot && !liveCurrentShot && (
+              <div className="preview__placeholder">
+                {pipelineError ? `Error: ${pipelineError}` : "— No signal · paste a logline to begin —"}
+              </div>
+            )}
             <div className="preview__overlay">
               <div className="corners">
-                <div>
-                  ● REC <b>·</b> {currentShot ? currentShot.code : "—"}
-                </div>
-                <div>
-                  {tc}
-                  <br />
-                  <span style={{ color: "oklch(100% 0 0 / 0.5)" }}>24.000 fps</span>
-                </div>
+                <div>● REC <b>·</b> {isDemo ? (demoCurrentShot?.code || "—") : (liveCurrentShot ? String(liveCurrentShot.spec.index + 1).padStart(2, "0") : "—")}</div>
+                <div>{tc}<br /><span style={{ color: "oklch(100% 0 0 / 0.5)" }}>24.000 fps</span></div>
               </div>
               <div className="bottom">
                 <div>
-                  <b>{currentShot ? currentShot.name : "—"}</b>
-                  <div style={{ opacity: 0.7, marginTop: 2 }}>{currentShot ? currentShot.desc : ""}</div>
+                  <b>{isDemo ? (demoCurrentShot?.name || "—") : (liveCurrentShot?.spec.description || "—")}</b>
+                  <div style={{ opacity: 0.7, marginTop: 2 }}>
+                    {isDemo ? (demoCurrentShot?.desc || "") : (liveCurrentShot ? [liveCurrentShot.spec.camera, liveCurrentShot.spec.mood].filter(Boolean).join(" · ") : "")}
+                  </div>
                 </div>
                 <div className="right">
-                  {phase === "producing" && (
-                    <>
-                      <div>render · {renderPct}%</div>
-                      <div className="progress">
-                        <i style={{ width: `${renderPct}%` }} />
-                      </div>
+                  {(phase === "producing" || phase === "running") && (
+                    <><div>render · {renderPct}%</div>
+                      <div className="progress"><i style={{ width: `${renderPct}%` }} /></div>
                     </>
                   )}
                 </div>
@@ -458,11 +612,11 @@ export function Studio({ tweaks }: { tweaks: Tweaks }) {
             {stripCells.map((c) => (
               <div
                 key={c.id}
-                className={`cell ${c.isCurrent ? "is-current" : ""} ${!c.done && !c.isCurrent ? "empty" : ""}`}
-                style={c.done || c.isCurrent ? { background: c.bg } : {}}
+                className={`cell ${c.isCurrent ? "is-current" : ""} ${c.isEmpty ? "empty" : ""}`}
+                style={c.bg && (c.done || c.isCurrent) ? { background: c.bg } : {}}
               >
                 <span className="num">{c.code}</span>
-                {!c.done && !c.isCurrent && "—"}
+                {c.isEmpty && "—"}
               </div>
             ))}
           </div>
@@ -495,7 +649,9 @@ export function Studio({ tweaks }: { tweaks: Tweaks }) {
               )}
               {phase === "done" && (
                 <div style={{ marginTop: 8, fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--live)", letterSpacing: "0.06em" }}>
-                  ✓ Master delivered · cut_v04.mp4 · 432 MB · 5:08
+                  {pipelineError
+                    ? `\u2717 Pipeline error: ${pipelineError}`
+                    : "\u2713 Master delivered · cut_v04.mp4 · all shots complete"}
                 </div>
               )}
             </div>
@@ -504,23 +660,48 @@ export function Studio({ tweaks }: { tweaks: Tweaks }) {
       </div>
 
       {/* TIMELINE */}
-      <Timeline phase={phase} completedShots={completedShots} activeShotIdx={activeShotIdx} playhead={playhead} />
+      <Timeline
+        isDemo={isDemo}
+        phase={phase}
+        completedShots={completedShots}
+        activeShotIdx={activeShotIdx}
+        playhead={playhead}
+        shotIds={liveShots.map((ls) => ls.spec.id)}
+        shotCount={shotCount}
+      />
     </div>
   );
 }
 
+/* ── Timeline ──────────────────────────────────────────────────────────── */
+
+const TIMELINE_TRACKS = [
+  { id: "story", name: "Story", c: "var(--c-story)" },
+  { id: "v1", name: "V1 \u00B7 Shots", c: "var(--c-shot)" },
+  { id: "v2", name: "V2 \u00B7 B-Roll", c: "var(--c-shot)" },
+  { id: "a1", name: "A1 \u00B7 Dialogue", c: "var(--c-sound)" },
+  { id: "a2", name: "A2 \u00B7 Foley", c: "var(--c-sound)" },
+  { id: "a3", name: "A3 \u00B7 Score", c: "var(--c-music)" },
+];
+
 function Timeline({
+  isDemo,
   phase,
   completedShots,
   activeShotIdx,
   playhead,
+  shotIds,
+  shotCount,
 }: {
+  isDemo: boolean;
   phase: Phase;
   completedShots: string[];
   activeShotIdx: number;
   playhead: number;
+  shotIds: string[];
+  shotCount: number;
 }) {
-  const shotWidth = 100 / SHOTS.length;
+  const shotWidth = 100 / shotCount;
   const ticks = Array.from({ length: 11 }, (_, i) => i);
 
   return (
@@ -540,14 +721,10 @@ function Timeline({
           <div className="track__head" style={{ "--c": track.c } as CSSProperties}>
             <span className="swatch" />
             <span className="name">{track.name}</span>
-            <span className="controls">
-              <b>M</b>
-              <b>S</b>
-              <b>R</b>
-            </span>
+            <span className="controls"><b>M</b><b>S</b><b>R</b></span>
           </div>
           <div className="track__lane">
-            {renderClips(track.id, { phase, completedShots, activeShotIdx, shotWidth })}
+            {renderClips(track.id, { isDemo, phase, completedShots, activeShotIdx, shotWidth, shotCount, shotIds })}
             <div className="playhead" style={{ left: `${playhead}%` }} />
           </div>
         </div>
@@ -558,9 +735,9 @@ function Timeline({
 
 function renderClips(
   trackId: string,
-  ctx: { phase: Phase; completedShots: string[]; activeShotIdx: number; shotWidth: number },
+  ctx: { isDemo: boolean; phase: Phase; completedShots: string[]; activeShotIdx: number; shotWidth: number; shotCount: number; shotIds: string[] },
 ): ReactNode[] {
-  const { phase, completedShots, activeShotIdx, shotWidth } = ctx;
+  const { isDemo, phase, completedShots, activeShotIdx, shotWidth, shotCount, shotIds } = ctx;
   const items: ReactNode[] = [];
 
   if (trackId === "story") {
@@ -573,9 +750,12 @@ function renderClips(
     }
   }
   if (trackId === "v1") {
-    SHOTS.forEach((s, i) => {
+    const shots = isDemo
+      ? DEMO_SHOTS.map((s) => ({ id: s.id, code: s.code }))
+      : Array.from({ length: shotCount }, (_, i) => ({ id: shotIds[i] || `s${i}`, code: String(i + 1).padStart(2, "0") }));
+    shots.forEach((s, i) => {
       const isDone = completedShots.includes(s.id);
-      const isCurr = phase === "producing" && i === activeShotIdx;
+      const isCurr = (isDemo ? phase === "producing" : phase === "running") && i === activeShotIdx;
       items.push(
         <div key={s.id} className={`clip ${isDone ? "" : isCurr ? "is-rendering" : "is-pending"}`} style={{ left: `${i * shotWidth + 0.3}%`, width: `${shotWidth - 0.6}%`, "--c": "var(--c-shot)" } as CSSProperties}>
           {s.code}
@@ -587,9 +767,7 @@ function renderClips(
     const ready = phase === "mixing" || phase === "editing" || phase === "done";
     ([[12, 8], [45, 6], [70, 10], [88, 7]] as const).forEach(([l, w], i) => {
       items.push(
-        <div key={i} className={`clip ${ready ? "" : "is-pending"}`} style={{ left: `${l}%`, width: `${w}%`, "--c": "var(--c-shot)" } as CSSProperties}>
-          B{i + 1}
-        </div>,
+        <div key={i} className={`clip ${ready ? "" : "is-pending"}`} style={{ left: `${l}%`, width: `${w}%`, "--c": "var(--c-shot)" } as CSSProperties}>B{i + 1}</div>,
       );
     });
   }
@@ -597,27 +775,21 @@ function renderClips(
     const ready = ["mixing", "editing", "done"].includes(phase);
     ([[5, 14, "Dialogue 1A"], [28, 18, "Dialogue 2A"], [60, 16, "Dialogue 4A"]] as const).forEach(([l, w, n], i) => {
       items.push(
-        <div key={i} className={`clip wave ${ready ? "" : "is-pending"}`} style={{ left: `${l}%`, width: `${w}%`, "--c": "var(--c-sound)" } as CSSProperties}>
-          {n}
-        </div>,
+        <div key={i} className={`clip wave ${ready ? "" : "is-pending"}`} style={{ left: `${l}%`, width: `${w}%`, "--c": "var(--c-sound)" } as CSSProperties}>{n}</div>,
       );
     });
   }
   if (trackId === "a2") {
     const ready = ["mixing", "editing", "done"].includes(phase);
     items.push(
-      <div key="amb" className={`clip wave ${ready ? "" : "is-pending"}`} style={{ left: "0%", width: "100%", "--c": "var(--c-sound)" } as CSSProperties}>
-        Atmos · rain · room tone
-      </div>,
+      <div key="amb" className={`clip wave ${ready ? "" : "is-pending"}`} style={{ left: "0%", width: "100%", "--c": "var(--c-sound)" } as CSSProperties}>Atmos · rain · room tone</div>,
     );
   }
   if (trackId === "a3") {
     const ready = ["mixing", "editing", "done"].includes(phase);
     ([[8, 38, "Theme A · cello"], [55, 42, "Theme B · strings"]] as const).forEach(([l, w, n], i) => {
       items.push(
-        <div key={i} className={`clip wave ${ready ? "" : "is-pending"}`} style={{ left: `${l}%`, width: `${w}%`, "--c": "var(--c-music)" } as CSSProperties}>
-          {n}
-        </div>,
+        <div key={i} className={`clip wave ${ready ? "" : "is-pending"}`} style={{ left: `${l}%`, width: `${w}%`, "--c": "var(--c-music)" } as CSSProperties}>{n}</div>,
       );
     });
   }
