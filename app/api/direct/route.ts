@@ -5,9 +5,11 @@ export const maxDuration = 300;
 
 export async function POST(req: Request) {
   let idea = "";
+  let provider = "simulated";
   try {
-    const body = (await req.json()) as { idea?: string };
+    const body = (await req.json()) as { idea?: string; provider?: string };
     idea = body.idea?.trim() ?? "";
+    provider = body.provider ?? "simulated";
   } catch {
     /* fall through to validation */
   }
@@ -24,7 +26,7 @@ export async function POST(req: Request) {
       const send = (event: unknown) =>
         controller.enqueue(encoder.encode(`data: ${JSON.stringify(event)}\n\n`));
       try {
-        for await (const event of runPipeline(idea)) {
+        for await (const event of runPipeline(idea, provider)) {
           send(event);
         }
       } catch (err) {

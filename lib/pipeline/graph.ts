@@ -77,8 +77,8 @@ export type { St as FilmGraphState, Up as FilmGraphUpdate };
                     ├── cinematographer  (more shots)
                     └── editor → END     (all shots done)
    ────────────────────────────────────────────────────────────────────────── */
-export function createFilmGraph(emit: (e: PipelineEvent) => void) {
-  const provider = getVideoProvider();
+export function createFilmGraph(emit: (e: PipelineEvent) => void, provider?: VideoProvider) {
+  const _provider = provider ?? getVideoProvider();
   const style = (st: St) => `${st.treatment!.logline} — ${st.treatment!.synopsis}`;
   const currentShot = (st: St) => st.shots[st.currentShotIndex];
 
@@ -126,7 +126,7 @@ export function createFilmGraph(emit: (e: PipelineEvent) => void) {
     const shot = currentShot(st);
     emit({ type: "shot", shotId: shot.id, status: "rendering" });
     try {
-      const render = await provider.generateShot({ prompt: st.prompt ?? "", shot });
+      const render = await _provider.generateShot({ prompt: st.prompt ?? "", shot });
       emit({ type: "shot", shotId: shot.id, status: "ready", render });
       return {
         shotResults: {
@@ -196,7 +196,7 @@ export function createFilmGraph(emit: (e: PipelineEvent) => void) {
         prompt: st.shotResults[shot.id]?.prompt ?? "",
         render: st.shotResults[shot.id]?.render,
       })),
-      provider: provider.name,
+      provider: _provider.name,
       createdAt: new Date().toISOString(),
     };
 

@@ -179,6 +179,7 @@ export function Studio({ tweaks, mode = "demo" }: { tweaks: Tweaks; mode?: "demo
   const [liveShots, setLiveShots] = useState<LiveShot[]>([]);
   const [pipelineError, setPipelineError] = useState<string | null>(null);
   const [filmUrl, setFilmUrl] = useState<string | null>(null);
+  const [provider, setProvider] = useState("simulated");
 
   const timerRef = useRef<ReturnType<typeof setTimeout>[]>([]);
   const typeRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -316,7 +317,7 @@ export function Studio({ tweaks, mode = "demo" }: { tweaks: Tweaks; mode?: "demo
       const res = await fetch("/api/direct", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ idea: logline }),
+        body: JSON.stringify({ idea: logline, provider }),
         signal: ac.signal,
       });
 
@@ -609,9 +610,23 @@ export function Studio({ tweaks, mode = "demo" }: { tweaks: Tweaks; mode?: "demo
                       <div className="progress"><i style={{ width: `${renderPct}%` }} /></div>
                     </>
                   )}
-                </div>
-              </div>
-            </div>
+          </div>
+        </div>
+        <div className="bar-block">
+          <span className="label">Provider</span>
+          <select
+            className="provider-select"
+            value={provider}
+            onChange={(e) => setProvider(e.target.value)}
+            disabled={phase !== "idle" && phase !== "done"}
+          >
+            <option value="simulated">Simulated (keyless)</option>
+            <option value="fal/seedance-2.0">fal/seedance-2.0</option>
+            <option value="fal/ltx-2">fal/ltx-2</option>
+            <option value="runpod/ltx-2" disabled>runpod/ltx-2</option>
+          </select>
+        </div>
+      </div>
           </div>
           <div className="preview__strip">
             {stripCells.map((c) => (

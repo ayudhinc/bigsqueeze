@@ -1,4 +1,6 @@
 import type { PipelineEvent } from "./types";
+import type { VideoProvider } from "@/lib/providers/video";
+import { createProvider } from "@/lib/providers/video";
 import { createFilmGraph } from "./graph";
 import { assembleFilm } from "@/lib/ffmpeg/assemble";
 
@@ -8,20 +10,23 @@ type GraphResult = { ok: true } | { ok: false; error: Error };
  * The Director: runs the full filmmaking pipeline as a LangGraph state
  * machine and yields a stream of PipelineEvents for the live timeline UI.
  *
- * Graph topology:
- *   Screenwriter → Director → [per shot: Cinematographer → Renderer →
- *   Post-production (Sound+Score+Color sequential) → QC retry loop] →
- *   Editor → done
+ * @param idea       — the logline / film idea
+ * @param providerKind — which video provider to use (simulated, fal/ltx-2, etc.)
  */
-export async function* runPipeline(idea: string): AsyncGenerator<PipelineEvent> {
+export async function* runPipeline(
+  idea: string,
+  providerKind = "simulated",
+): AsyncGenerator<PipelineEvent> {
   const events: PipelineEvent[] = [];
+
+  const provider: VideoProvider = createProvider(providerKind);
 
   const emit = (e: PipelineEvent) => {
     events.push(e);
   };
 
   /* Build and start the graph (event-emit callbacks fire inside nodes). */
-  const graph = createFilmGraph(emit);
+  const graph = createFilmGraph(emit, provider);
   const result: GraphResult = await graph
     .invoke({ idea })
     .then(() => ({ ok: true as const }))

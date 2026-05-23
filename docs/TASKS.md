@@ -47,7 +47,8 @@ On-disk source of truth for the build sequence. Check items off as we go.
 - [x] Final film player + download
 
 ## 7. Real LTX-2
-- [ ] Wire chosen provider (fal or runpod) end-to-end [needs keys]
+- [x] Wire chosen provider (fal or runpod) end-to-end [needs keys]
+- [x] Provider dropdown in Studio UI (simulated / fal/seedance-2.0 / fal/ltx-2 / runpod/ltx-2 disabled)
 - [ ] Reference-image conditioning for shot consistency
 
 ## 8. Polish / demo

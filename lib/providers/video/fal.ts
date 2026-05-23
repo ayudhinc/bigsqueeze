@@ -2,21 +2,20 @@ import { fal } from "@fal-ai/client";
 import type { VideoProvider, GenerateShotInput } from "./interface";
 import type { ShotRender } from "@/lib/pipeline/types";
 
-/**
- * fal.ai LTX-2 adapter. Reads FAL_KEY from the environment automatically.
- * Model + input schema follow the LTX-2 model pages (fal-ai/ltx-2/...).
- * Output is parsed defensively; confirm exact knobs (resolution, duration,
- * aspect_ratio) against the chosen model's schema when wiring real keys.
- */
 export class FalVideoProvider implements VideoProvider {
-  readonly name = "fal";
+  readonly name: string;
   private readonly model: string;
 
-  constructor() {
+  /**
+   * @param model — fal.ai model ID, e.g. "fal-ai/ltx-2/text-to-video/fast"
+   *                or "bytedance/seedance-2.0/fast/text-to-video"
+   */
+  constructor(model?: string) {
     if (!process.env.FAL_KEY) {
-      throw new Error("[video] VIDEO_PROVIDER=fal but FAL_KEY is not set");
+      throw new Error("[video] FAL_KEY is not set");
     }
-    this.model = process.env.FAL_VIDEO_MODEL ?? "fal-ai/ltx-2/text-to-video/fast";
+    this.model = model ?? process.env.FAL_VIDEO_MODEL ?? "fal-ai/ltx-2/text-to-video/fast";
+    this.name = this.model.includes("seedance") ? "seedance" : "fal";
   }
 
   async generateShot(input: GenerateShotInput): Promise<ShotRender> {
@@ -24,8 +23,6 @@ export class FalVideoProvider implements VideoProvider {
     const result = await fal.subscribe(this.model, {
       input: {
         prompt: input.prompt,
-        // TODO: confirm knobs against the model schema (resolution / duration /
-        // num_frames / aspect_ratio). Kept minimal for portability across LTX-2 variants.
       },
     });
 
