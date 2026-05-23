@@ -16,6 +16,8 @@ type GraphResult = { ok: true } | { ok: false; error: Error };
 export async function* runPipeline(
   idea: string,
   providerKind = "simulated",
+  aspect = "16:9",
+  targetLength = "60s",
 ): AsyncGenerator<PipelineEvent> {
   const events: PipelineEvent[] = [];
 
@@ -28,7 +30,7 @@ export async function* runPipeline(
   /* Build and start the graph (event-emit callbacks fire inside nodes). */
   const graph = createFilmGraph(emit, provider);
   const result: GraphResult = await graph
-    .invoke({ idea })
+    .invoke({ idea, aspect, targetLength })
     .then(() => ({ ok: true as const }))
     .catch((err: unknown) => ({
       ok: false as const,

@@ -181,6 +181,8 @@ export function Studio({ tweaks, mode = "demo" }: { tweaks: Tweaks; mode?: "demo
   const [pipelineError, setPipelineError] = useState<string | null>(null);
   const [filmUrl, setFilmUrl] = useState<string | null>(null);
   const [provider, setProvider] = useState("simulated");
+  const [aspect, setAspect] = useState("16:9");
+  const [targetLength, setTargetLength] = useState("60s");
 
   const timerRef = useRef<ReturnType<typeof setTimeout>[]>([]);
   const typeRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -318,7 +320,7 @@ export function Studio({ tweaks, mode = "demo" }: { tweaks: Tweaks; mode?: "demo
       const res = await fetch("/api/direct", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ idea: logline, provider }),
+        body: JSON.stringify({ idea: logline, provider, aspect, targetLength }),
         signal: ac.signal,
       });
 
@@ -518,9 +520,42 @@ export function Studio({ tweaks, mode = "demo" }: { tweaks: Tweaks; mode?: "demo
       <div className="studio__bar">
         <div className="bar-block">
           <span className="label">Project</span>
-          <div className="value"><b>{tweaks.projectName || "Untitled"}</b> · 16:9 · 24p</div>
+          <div className="value"><b>{tweaks.projectName || "Untitled"}</b> · {aspect} · 24p</div>
           <div className="value" style={{ color: "var(--text-dim)", marginTop: 4 }}>
-            Target runtime · 4–6 min
+            Target runtime · {targetLength}
+          </div>
+        </div>
+        <div className="bar-block">
+          <span className="label">Format</span>
+          <div style={{ display: "flex", gap: 8 }}>
+            <select
+              className="provider-select"
+              value={aspect}
+              onChange={(e) => setAspect(e.target.value)}
+              disabled={phase !== "idle" && phase !== "done"}
+              style={{ width: "auto" }}
+            >
+              <option value="16:9">16:9</option>
+              <option value="2.39:1">2.39:1</option>
+              <option value="1.85:1">1.85:1</option>
+              <option value="1:1">1:1</option>
+              <option value="4:3">4:3</option>
+              <option value="9:16">9:16</option>
+            </select>
+            <select
+              className="provider-select"
+              value={targetLength}
+              onChange={(e) => setTargetLength(e.target.value)}
+              disabled={phase !== "idle" && phase !== "done"}
+              style={{ width: "auto" }}
+            >
+              <option value="30s">30s</option>
+              <option value="60s">60s</option>
+              <option value="2min">2 min</option>
+              <option value="3min">3 min</option>
+              <option value="5min">5 min</option>
+              <option value="10min">10 min</option>
+            </select>
           </div>
         </div>
         <div className="bar-block">

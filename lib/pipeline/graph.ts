@@ -27,6 +27,10 @@ export type ShotResult = {
 const FilmState = Annotation.Root({
   idea: Annotation<string>,
 
+  aspect: Annotation<string>,
+
+  targetLength: Annotation<string>,
+
   treatment: Annotation<Treatment | null>({ reducer: (a, b) => b ?? a }),
 
   shots: Annotation<ShotSpec[]>({ reducer: (a, b) => b ?? a, default: () => [] }),
