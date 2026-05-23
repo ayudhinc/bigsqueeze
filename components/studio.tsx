@@ -149,10 +149,14 @@ function DemoShotFrame({ shot, scrub = 0 }: { shot: DemoShot | null; scrub?: num
   );
 }
 
-function LiveShotFrame({ url, alt }: { url: string; alt: string }) {
+function LiveShotFrame({ url, alt, kind }: { url: string; alt: string; kind: string }) {
   return (
     <div className="preview__frame" style={{ display: "grid", placeItems: "center", background: "#000" }}>
-      <img src={url} alt={alt} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+      {kind === "video" ? (
+        <video src={url} autoPlay loop muted playsInline style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+      ) : (
+        <img src={url} alt={alt} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+      )}
     </div>
   );
 }
@@ -178,11 +182,14 @@ export function Studio({ tweaks, mode = "demo" }: { tweaks: Tweaks; mode?: "demo
 
   /* live-mode state */
   const [liveShots, setLiveShots] = useState<LiveShot[]>([]);
+  const liveShotsRef = useRef(liveShots);
+  liveShotsRef.current = liveShots;
   const [pipelineError, setPipelineError] = useState<string | null>(null);
   const [filmUrl, setFilmUrl] = useState<string | null>(null);
   const [provider, setProvider] = useState("simulated");
   const [aspect, setAspect] = useState("16:9");
-  const [targetLength, setTargetLength] = useState("60s");
+  const [targetLength, setTargetLength] = useState("5s");
+  const [renders, setRenders] = useState<Array<{ file: string; url: string; size: number }>>([]);
 
   const timerRef = useRef<ReturnType<typeof setTimeout>[]>([]);
   const typeRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -190,6 +197,7 @@ export function Studio({ tweaks, mode = "demo" }: { tweaks: Tweaks; mode?: "demo
 
   useEffect(() => {
     setLogline((l) => l || PRESETS[0]);
+    fetch("/api/renders").then((r) => r.json()).then(setRenders).catch(() => {});
   }, []);
 
   /* helpers */
@@ -350,6 +358,7 @@ export function Studio({ tweaks, mode = "demo" }: { tweaks: Tweaks; mode?: "demo
           } catch { /* skip malformed */ }
         }
       }
+      setPhase((p) => (p === "running" ? "done" : p));
     } catch (err: unknown) {
       if (ac.signal.aborted) return;
       const msg = (err as Error).message;
@@ -391,7 +400,7 @@ export function Studio({ tweaks, mode = "demo" }: { tweaks: Tweaks; mode?: "demo
           ),
         );
         if (event.status === "rendering") {
-          const idx = liveShots.findIndex((ls) => ls.spec.id === event.shotId);
+          const idx = liveShotsRef.current.findIndex((ls) => ls.spec.id === event.shotId);
           if (idx >= 0) setActiveShotIdx(idx);
         }
         if (event.status === "ready") {
@@ -546,6 +555,10 @@ export function Studio({ tweaks, mode = "demo" }: { tweaks: Tweaks; mode?: "demo
               disabled={phase !== "idle" && phase !== "done"}
               style={{ width: "auto" }}
             >
+              <option value="5s">5s</option>
+              <option value="10s">10s</option>
+              <option value="15s">15s</option>
+              <option value="20s">20s</option>
               <option value="30s">30s</option>
               <option value="60s">60s</option>
               <option value="2min">2 min</option>
@@ -633,7 +646,7 @@ export function Studio({ tweaks, mode = "demo" }: { tweaks: Tweaks; mode?: "demo
           </div>
           <div className="preview__viewport cinebars">
             {isDemo && demoCurrentShot && <DemoShotFrame shot={demoCurrentShot} scrub={renderPct / 100} />}
-            {!isDemo && liveCurrentShot?.render && <LiveShotFrame url={liveCurrentShot.render.url} alt={liveCurrentShot.spec.description} />}
+            {!isDemo && liveCurrentShot?.render && <LiveShotFrame url={liveCurrentShot.render.url} alt={liveCurrentShot.spec.description} kind={liveCurrentShot.render.kind} />}
             {!demoCurrentShot && !liveCurrentShot && (
               <div className="preview__placeholder">
                 {pipelineError ? `Error: ${pipelineError}` : "— No signal · paste a logline to begin —"}
@@ -726,6 +739,21 @@ export function Studio({ tweaks, mode = "demo" }: { tweaks: Tweaks; mode?: "demo
                       {'\u2713'} Master delivered · all shots complete
                     </span>
                   )}
+                </div>
+              )}
+              {renders.length > 0 && !filmUrl && (
+                <div style={{ marginTop: 12, borderTop: "1px solid var(--border)", paddingTop: 10 }}>
+                  <span className="label" style={{ display: "block", marginBottom: 6 }}>Previous renders</span>
+                  {renders.slice(0, 5).map((r) => (
+                    <div key={r.file} style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 4 }}>
+                      <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--text-dim)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>
+                        {r.file.replace(/^film-/, "").replace(/\.mp4$/, "").slice(0, 40)}
+                      </span>
+                      <a href={r.url} download style={{ fontFamily: "var(--font-mono)", fontSize: 9, color: "var(--c-shot)", textDecoration: "none" }}>
+                        {'\u2B07'}
+                      </a>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>

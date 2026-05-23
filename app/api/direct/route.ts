@@ -13,7 +13,7 @@ export async function POST(req: Request) {
     idea = body.idea?.trim() ?? "";
     provider = body.provider ?? "simulated";
     aspect = body.aspect ?? "16:9";
-    targetLength = body.targetLength ?? "60s";
+    targetLength = body.targetLength ?? "5s";
   } catch {
     /* fall through to validation */
   }

@@ -1,5 +1,5 @@
 import { execSync } from "node:child_process";
-import { writeFileSync, mkdirSync, rmSync } from "node:fs";
+import { writeFileSync, mkdirSync, rmSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import type { FilmManifest } from "@/lib/pipeline/types";
 
@@ -26,6 +26,10 @@ function writeFallbackSvg(path: string, desc: string) {
   );
 }
 
+function download(url: string, dest: string) {
+  execSync(`curl -sL -o "${dest}" "${url}"`, { timeout: 60_000 });
+}
+
 export function assembleFilm(manifest: FilmManifest): string {
   mkdirSync(RENDERS_DIR, { recursive: true });
 
@@ -41,10 +45,26 @@ export function assembleFilm(manifest: FilmManifest): string {
   const tmpDir = join(RENDERS_DIR, `tmp-${ts}`);
   mkdirSync(tmpDir, { recursive: true });
 
-  const fileList: { path: string; duration: number }[] = [];
+  const segments: string[] = [];
 
   for (let i = 0; i < manifest.shots.length; i++) {
     const { shot, render } = manifest.shots[i];
+    const segPath = join(tmpDir, `seg-${i}.mp4`);
+
+    if (render?.url && !render.url.startsWith("data:")) {
+      /* Video render — download and use directly. */
+      const videoPath = join(tmpDir, `video-${i}.mp4`);
+      download(render.url, videoPath);
+      if (existsSync(videoPath)) {
+        execSync(
+          `ffmpeg -y -i "${videoPath}" -c copy -an -t ${Math.max(2, shot.durationSec)} "${segPath}" 2>/dev/null`,
+        );
+        segments.push(segPath);
+        continue;
+      }
+    }
+
+    /* SVG or fallback — convert to PNG then loop into an MP4 segment. */
     const svgPath = join(tmpDir, `shot-${i}.svg`);
     const pngPath = join(tmpDir, `shot-${i}.png`);
 
@@ -55,15 +75,8 @@ export function assembleFilm(manifest: FilmManifest): string {
     }
 
     execSync(`rsvg-convert -w 1280 -h 720 "${svgPath}" > "${pngPath}"`);
-    fileList.push({ path: pngPath, duration: Math.max(2, shot.durationSec) });
-  }
-
-  const segments: string[] = [];
-  for (let i = 0; i < fileList.length; i++) {
-    const f = fileList[i];
-    const segPath = join(tmpDir, `seg-${i}.mp4`);
     execSync(
-      `ffmpeg -y -loop 1 -i "${f.path}" -c:v libx264 -t ${f.duration} -pix_fmt yuv420p -r 24 -preset ultrafast "${segPath}" 2>/dev/null`,
+      `ffmpeg -y -loop 1 -i "${pngPath}" -c:v libx264 -t ${Math.max(2, shot.durationSec)} -pix_fmt yuv420p -r 24 -preset ultrafast "${segPath}" 2>/dev/null`,
     );
     segments.push(segPath);
   }
