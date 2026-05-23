@@ -150,11 +150,10 @@ export function createFilmGraph(emit: (e: PipelineEvent) => void) {
     emit({ type: "agent", agent: "Composer", status: "start", message: `shot ${idx}` });
     emit({ type: "agent", agent: "Colorist", status: "start", message: `shot ${idx}` });
 
-    const [sound, score, color] = await Promise.all([
-      designSound(shot),
-      composeScore(shot),
-      gradeShot(shot),
-    ]);
+    /* Run sequentially to avoid Groq free-tier rate limits (8K TPM). */
+    const sound = await designSound(shot);
+    const score = await composeScore(shot);
+    const color = await gradeShot(shot);
 
     emit({
       type: "agent",

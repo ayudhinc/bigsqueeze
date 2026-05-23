@@ -35,6 +35,7 @@ export async function breakIntoShots(treatment: Treatment): Promise<ShotSpec[]> 
       ShotsSchema,
       `Break this treatment into 4-6 filmable shots for an AI video model.\nEach shot: a vivid one-sentence visual description, a duration (3-8s), a camera move, and a mood.\n\nLogline: ${treatment.logline}\nSynopsis: ${treatment.synopsis}\nBeats:\n${treatment.beats.map((b, i) => `${i + 1}. ${b}`).join("\n")}`,
       "You are a cinematographer planning coverage. Each shot must be self-contained and visual.",
+      "director",
     );
     raw = out.shots;
   } else {

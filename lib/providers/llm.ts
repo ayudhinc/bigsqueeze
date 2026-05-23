@@ -1,6 +1,8 @@
 import { generateObject, generateText } from "ai";
 import { createOpenAI } from "@ai-sdk/openai";
-import type { z } from "zod/v4";
+import { z } from "zod/v4";
+
+const TIMEOUT_MS = 60_000;
 
 /* ── Provider selection ───────────────────────────────────────────────────
    Three modes, controlled by LLM_PROVIDER:
@@ -9,34 +11,142 @@ import type { z } from "zod/v4";
      "openai"           → Direct OpenAI
    ──────────────────────────────────────────────────────────────────────────── */
 const PROVIDER = (process.env.LLM_PROVIDER ?? "gateway").toLowerCase();
-const MODEL = process.env.LLM_MODEL ?? "openai/gpt-4o-mini";
-const GROQ_MODEL = process.env.GROQ_MODEL ?? "llama-3.3-70b-versatile";
-const OPENAI_MODEL = process.env.OPENAI_MODEL ?? "gpt-4o-mini";
 
-function getModel() {
+export type AgentId =
+  | "writer"
+  | "director"
+  | "dp"
+  | "editor"
+  | "sound"
+  | "score"
+  | "color";
+
+/* ── Default model per provider ──────────────────────────────────────────── */
+const DEFAULT_MODEL: string =
+  PROVIDER === "groq"
+    ? process.env.GROQ_MODEL ?? "openai/gpt-oss-20b"
+    : PROVIDER === "openai"
+      ? process.env.OPENAI_MODEL ?? "gpt-4o-mini"
+      : process.env.LLM_MODEL ?? "openai/gpt-4o-mini";
+
+/* ── Per-agent model routing ──────────────────────────────────────────────
+   Override with env vars, e.g. LLM_MODEL_WRITER=llama-3.1-8b-instant.
+   When unset, every agent uses the default model.
+   ──────────────────────────────────────────────────────────────────────────── */
+const AGENT_MODEL: Record<AgentId, string> = {
+  writer:   process.env.LLM_MODEL_WRITER   ?? DEFAULT_MODEL,
+  director: process.env.LLM_MODEL_DIRECTOR ?? DEFAULT_MODEL,
+  dp:       process.env.LLM_MODEL_DP       ?? DEFAULT_MODEL,
+  editor:   process.env.LLM_MODEL_EDITOR   ?? DEFAULT_MODEL,
+  sound:    process.env.LLM_MODEL_SOUND    ?? DEFAULT_MODEL,
+  score:    process.env.LLM_MODEL_SCORE    ?? DEFAULT_MODEL,
+  color:    process.env.LLM_MODEL_COLOR    ?? DEFAULT_MODEL,
+};
+
+const ALL_SAME = new Set(Object.values(AGENT_MODEL)).size === 1;
+
+/* ── Cached provider handles ────────────────────────────────────────────── */
+let _groq: ReturnType<typeof createOpenAI> | null = null;
+let _openai: ReturnType<typeof createOpenAI> | null = null;
+
+function resolveModel(agent?: AgentId) {
+  const name = agent && !ALL_SAME ? AGENT_MODEL[agent] : DEFAULT_MODEL;
+
   switch (PROVIDER) {
     case "groq": {
-      const groq = createOpenAI({
-        name: "groq",
-        baseURL: "https://api.groq.com/openai/v1",
-        apiKey: process.env.GROQ_API_KEY,
-      });
-      return groq(GROQ_MODEL);
+      if (!_groq)
+        _groq = createOpenAI({
+          name: "groq",
+          baseURL: "https://api.groq.com/openai/v1",
+          apiKey: process.env.GROQ_API_KEY,
+        });
+      return _groq(name);
     }
     case "openai": {
-      const openai = createOpenAI({
-        apiKey: process.env.OPENAI_API_KEY,
-      });
-      return openai(OPENAI_MODEL);
+      if (!_openai)
+        _openai = createOpenAI({
+          apiKey: process.env.OPENAI_API_KEY,
+        });
+      return _openai(name);
     }
-    default: {
-      /* AI Gateway — model string "provider/model" */
-      return MODEL;
+    default:
+      return name;
+  }
+}
+
+/* ── JSON-schema support lookup ────────────────────────────────────────────
+   Groq only supports json_schema on GPT-OSS and Llama 4 Scout.
+   ──────────────────────────────────────────────────────────────────────────── */
+const JSON_SCHEMA_MODELS = new Set([
+  "openai/gpt-oss-20b",
+  "openai/gpt-oss-120b",
+  "openai/gpt-oss-safeguard-20b",
+  "meta-llama/llama-4-scout-17b-16e-instruct",
+]);
+
+function supportsJsonSchema(modelName: string): boolean {
+  if (PROVIDER === "gateway") return true;
+  if (PROVIDER === "openai") return true;
+  return JSON_SCHEMA_MODELS.has(modelName);
+}
+
+/* ── Rate-limit retry wrapper ────────────────────────────────────────────── */
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+async function withRetry<T>(fn: () => Promise<T>, retries = 3): Promise<T> {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      if (attempt >= retries - 1) throw err;
+      const msg = (err as Error).message;
+      if (
+        msg.includes("Rate limit") ||
+        msg.includes("429") ||
+        msg.includes("Too Many Requests")
+      ) {
+        const match = msg.match(/try again in ([\d.]+)s/);
+        const delay = match ? Number(match[1]) * 1000 + 500 : Math.min(1000 * 2 ** attempt, 15_000);
+        await sleep(delay);
+        continue;
+      }
+      if (
+        msg.includes("timeout") ||
+        msg.includes("timed out") ||
+        msg.includes("ETIMEDOUT")
+      ) {
+        await sleep(2000 * 2 ** attempt);
+        continue;
+      }
+      if (msg.includes("does not match the expected schema") || msg.includes("jsonschema")) {
+        await sleep(1000 * 2 ** attempt);
+        continue;
+      }
+      throw err;
     }
   }
 }
 
-const model = getModel();
+/* ── Schema → readable field descriptor ──────────────────────────────────── */
+function describeSchema(schema: z.ZodType<unknown>): string {
+  const shape = (schema as unknown as { _def: { shape: Record<string, z.ZodType<unknown>> } })._def?.shape;
+  if (shape) {
+    const fields = Object.entries(shape).map(([key, field]) => {
+      const ft = (field as unknown as { type: string; _def?: { element?: unknown } }).type;
+      const val =
+        ft === "array"
+          ? "[...]"
+          : ft === "string"
+            ? '"string"'
+            : ft === "number"
+              ? "123"
+              : '"…"';
+      return `  "${key}": ${val}`;
+    });
+    return `{\n${fields.join(",\n")}\n}`;
+  }
+  return "JSON object";
+}
 
 /**
  * Whether a real LLM is available (key present for the active provider).
@@ -53,12 +163,57 @@ export async function genObject<T>(
   schema: z.ZodType<T>,
   prompt: string,
   system?: string,
+  agent?: AgentId,
 ): Promise<T> {
-  const { object } = await generateObject({ model, schema, prompt, system });
-  return object as T;
+  const modelName = agent && !ALL_SAME ? AGENT_MODEL[agent] : DEFAULT_MODEL;
+
+  if (supportsJsonSchema(modelName)) {
+    const { object } = await withRetry(() =>
+      generateObject({
+        model: resolveModel(agent),
+        schema,
+        prompt,
+        system,
+        maxRetries: 0,
+      }),
+    );
+    return object as T;
+  }
+
+  /* Fallback: text-gen → JSON parse → Zod validate (with retries). */
+  const schemaDesc = describeSchema(schema);
+  const basePrompt = `${prompt}\n\nOutput ONLY a raw JSON object matching this structure exactly:\n${schemaDesc}\nNo markdown, no code fences, no explanation.`;
+  const baseSystem = system
+    ? `${system}\nYou output only raw JSON.`
+    : "You output only raw JSON.";
+
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const text = await genText(basePrompt, baseSystem, agent);
+    const cleaned = text.replace(/^```(?:json)?\s*|\s*```$/gi, "").trim();
+    try {
+      return schema.parse(JSON.parse(cleaned));
+    } catch (err) {
+      if (attempt === 2) throw new Error(
+        `Structured output parse failed after 3 attempts: ${(err as Error).message}`,
+      );
+    }
+  }
+
+  throw new Error("Unreachable");
 }
 
-export async function genText(prompt: string, system?: string): Promise<string> {
-  const { text } = await generateText({ model, prompt, system });
+export async function genText(
+  prompt: string,
+  system?: string,
+  agent?: AgentId,
+): Promise<string> {
+  const { text } = await withRetry(() =>
+    generateText({
+      model: resolveModel(agent),
+      prompt,
+      system,
+      maxRetries: 0,
+    }),
+  );
   return text.trim();
 }

@@ -27,6 +27,7 @@ Palette: key color tones.
 Contrast: shadow/midtone/highlight treatment.
 Grade: one-line look reference.`,
       "You are a film colorist. Be specific about color temperatures and contrast ratios.",
+      "color",
     );
   }
   return {

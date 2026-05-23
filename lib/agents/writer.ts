@@ -15,6 +15,7 @@ export async function writeTreatment(idea: string): Promise<Treatment> {
       TreatmentSchema,
       `Develop this idea into a short-film treatment.\nIdea: ${idea}\n\nReturn a punchy logline, a 2-3 sentence synopsis, and 4-5 visual story beats (each one concrete, filmable sentence).`,
       "You are a sharp film writer. Be concrete, visual, and concise.",
+      "writer",
     );
   }
   return {

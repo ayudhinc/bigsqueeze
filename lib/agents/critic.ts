@@ -17,6 +17,7 @@ export async function critiqueShot(
       NoteSchema,
       `Critique this shot prompt for clarity and visual impact. If strong, ok=true with a one-line compliment. If weak, cliché, or unfilmable, ok=false with a one-line fix.\n\nShot: ${shot.description}\nPrompt: ${prompt}`,
       "You are a tough but fair film critic. Respond in one sentence.",
+      "editor",
     );
   }
   return {

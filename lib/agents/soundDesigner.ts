@@ -36,6 +36,7 @@ Atmos: one-line ambient environment.
 Foley: one-line practical sound effects.
 Note: one-line mix direction.`,
       "You are a sound designer for film. Be specific and cinematic.",
+      "sound",
     );
   }
   return {

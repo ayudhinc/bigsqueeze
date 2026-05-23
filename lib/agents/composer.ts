@@ -27,6 +27,7 @@ Theme: one-line melodic or atmospheric description.
 Instrumentation: which instruments carry the moment.
 Tempo: BPM range and feel.`,
       "You are a film composer. Respond with musical precision.",
+      "score",
     );
   }
   return {
