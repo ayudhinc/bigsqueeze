@@ -6,7 +6,7 @@ const geist = Geist({ subsets: ["latin"], variable: "--font-geist" });
 const geistMono = Geist_Mono({ subsets: ["latin"], variable: "--font-geist-mono" });
 
 export const metadata: Metadata = {
-  title: "FilmWrite — the agent-swarm filmmaker",
+  title: "Big Squeeze — the agent-swarm filmmaker",
   description:
     "A logline goes in. A short film comes out. A swarm of agents directs the shoot on a live timeline.",
 };

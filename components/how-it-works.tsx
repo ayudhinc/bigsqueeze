@@ -1,5 +1,5 @@
 import type { CSSProperties } from "react";
-import { PIPELINE } from "@/lib/filmwrite-data";
+import { PIPELINE } from "@/lib/bigsqueeze-data";
 
 export function HowItWorks() {
   return (

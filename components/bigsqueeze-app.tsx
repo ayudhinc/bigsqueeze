@@ -23,12 +23,12 @@ const TWEAK_DEFAULTS: Tweaks = {
   headline_lead: "A logline goes in.",
   headline_emph: "A short film comes out.",
   subhead:
-    "FilmWrite is a writers' room, camera crew, sound stage, and edit bay — staffed by autonomous agents. You watch them work on a live timeline. They watch you direct.",
+    "Big Squeeze is a writers' room, camera crew, sound stage, and edit bay — staffed by autonomous agents. You watch them work on a live timeline. They watch you direct.",
   projectName: "Untitled",
   showGrain: true,
 };
 
-export function FilmWriteApp() {
+export function BigSqueezeApp() {
   const [tweaks, setTweak] = useTweaks(TWEAK_DEFAULTS);
 
   useEffect(() => {

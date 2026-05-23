@@ -1,4 +1,4 @@
-// Static design data ported verbatim from the FilmWrite design bundle (data.jsx).
+// Static design data ported verbatim from the Big Squeeze design bundle.
 // SHOTS live in components/studio.tsx because they carry JSX art.
 
 export type Agent = {

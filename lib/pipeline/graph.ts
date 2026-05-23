@@ -7,7 +7,7 @@ import { designSound } from "@/lib/agents/soundDesigner";
 import { composeScore } from "@/lib/agents/composer";
 import { gradeShot } from "@/lib/agents/colorist";
 import { critiqueShot } from "@/lib/agents/critic";
-import { getVideoProvider } from "@/lib/providers/video";
+import { getVideoProvider, type VideoProvider } from "@/lib/providers/video";
 
 /* ──────────────────────────────────────────────────────────────────────────
    Per-shot result bag accumulated across cinematographer → renderer → post.

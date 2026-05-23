@@ -2,7 +2,7 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "filmwright",
+      "name": "big-squeeze",
       "runtimeExecutable": "pnpm",
       "runtimeArgs": ["dev", "--port", "3005"],
       "port": 3005

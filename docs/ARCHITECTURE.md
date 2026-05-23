@@ -1,6 +1,6 @@
-# Filmwright — Architecture & Stack
+# Big Squeeze — Architecture & Stack
 
-> Working name — rename freely. Hackathon entry for DevNetwork [AI+ML] 2026.
+> Agent-swarm film maker. Hackathon entry for DevNetwork [AI+ML] 2026.
 > **Separate from Backlot** (Backlot governs studio *production*; this is a focused
 > agent-swarm *film maker* demo).
 

@@ -28,7 +28,7 @@ export function Hero({ tweaks }: { tweaks: Tweaks }) {
             </h1>
             <p className="hero__sub">
               {tweaks.subhead ||
-                "FilmWrite is a writers' room, camera crew, sound stage, and edit bay — staffed by autonomous agents. You watch them work on a live timeline. They watch you direct."}
+                "Big Squeeze is a writers' room, camera crew, sound stage, and edit bay — staffed by autonomous agents. You watch them work on a live timeline. They watch you direct."}
             </p>
           </div>
           <div className="hero__meta">

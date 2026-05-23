@@ -1,4 +1,4 @@
-// Core domain types for the Filmwright pipeline.
+// Core domain types for the Big Squeeze pipeline.
 
 export type Treatment = {
   logline: string;

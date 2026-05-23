@@ -1,5 +1,5 @@
-import { FilmWriteApp } from "@/components/filmwrite-app";
+import { BigSqueezeApp } from "@/components/bigsqueeze-app";
 
 export default function Page() {
-  return <FilmWriteApp />;
+  return <BigSqueezeApp />;
 }

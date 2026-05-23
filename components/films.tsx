@@ -1,5 +1,5 @@
 import type { CSSProperties, ReactNode } from "react";
-import { FILMS } from "@/lib/filmwrite-data";
+import { FILMS } from "@/lib/bigsqueeze-data";
 
 const POSTERS: Record<number, { bg: string; fg: ReactNode }> = {
   1: {
@@ -77,7 +77,7 @@ export function Films() {
               <span className="dot" />
               Generated this week
             </div>
-            <h2 style={{ marginTop: 18 }}>Films made in FilmWrite</h2>
+            <h2 style={{ marginTop: 18 }}>Films made in Big Squeeze</h2>
           </div>
           <p className="lede">
             Six recent shorts produced by the swarm. Each card opens the full

@@ -3,8 +3,8 @@ export function Nav() {
     <nav className="nav">
       <div className="shell nav__inner">
         <a href="/" className="brand" style={{ textDecoration: "none", color: "inherit" }}>
-          <div className="brand__mark">F</div>
-          FilmWrite <small>v0.4 · beta</small>
+          <div className="brand__mark">B</div>
+          Big Squeeze <small>v0.4 · beta</small>
         </a>
         <div className="nav__links">
           <a href="/studio">Studio</a>

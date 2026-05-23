@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
-import { AGENTS, PRESETS } from "@/lib/filmwrite-data";
+import { AGENTS, PRESETS } from "@/lib/bigsqueeze-data";
 import type { Tweaks } from "@/components/tweaks-panel";
 import type { PipelineEvent, ShotSpec, ShotRender } from "@/lib/pipeline/types";
 
@@ -489,7 +489,7 @@ export function Studio({ tweaks, mode = "demo" }: { tweaks: Tweaks; mode?: "demo
       <div className="studio__chrome">
           <div className="lights"><b /><b /><b /></div>
           <div className="studio__path">
-            <b>FilmWrite</b>
+            <b>Big Squeeze</b>
             <span style={{ color: "var(--text-dim)" }}>/</span>
             <em>{tweaks.projectName?.toLowerCase().replace(/\s+/g, "_") || "untitled"}</em>
             <span style={{ color: "var(--text-dim)" }}>/</span>
