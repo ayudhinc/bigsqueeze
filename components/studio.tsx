@@ -358,12 +358,16 @@ export function Studio({ tweaks, mode = "demo" }: { tweaks: Tweaks; mode?: "demo
           } catch { /* skip malformed */ }
         }
       }
-      setPhase((p) => (p === "running" ? "done" : p));
+      setPhase("done");
+      setActiveAgents({});
+      setDoneAgents({});
     } catch (err: unknown) {
       if (ac.signal.aborted) return;
       const msg = (err as Error).message;
       setPipelineError(msg);
       setPhase("done");
+      setActiveAgents({});
+      setDoneAgents({});
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [logline]);
