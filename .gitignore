@@ -1,0 +1,35 @@
+# dependencies
+node_modules/
+.pnpm-store/
+
+# next
+.next/
+out/
+
+# typescript
+*.tsbuildinfo
+
+# claude (user-specific config)
+.claude/settings.local.json
+
+# build
+dist/
+build/
+
+# env / secrets
+.env
+.env*.local
+
+# generated demo output
+/public/renders/*
+!/public/renders/.gitkeep
+storage/
+
+# logs
+*.log
+npm-debug.log*
+
+# os / editor
+.DS_Store
+.idea/
+.vscode/
