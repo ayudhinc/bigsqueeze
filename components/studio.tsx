@@ -6,8 +6,8 @@ import { AGENTS, PRESETS } from "@/lib/filmwrite-data";
 import type { Tweaks } from "@/components/tweaks-panel";
 
 /* ────────────────────────────────────────────────────────────────────────────
-   STUDIO — the live "control room" mock (scripted), ported from the design.
-   idle → planning → producing → mixing → editing → done
+   STUDIO — the live "control room" (DAW-inspired), matched to the landing-page
+   design system and fully responsive from 1440px down to 360px.
    ──────────────────────────────────────────────────────────────────────────── */
 
 type Phase = "idle" | "planning" | "producing" | "mixing" | "editing" | "done";
@@ -32,9 +32,7 @@ type NoteState = {
 
 const SHOTS: Shot[] = [
   {
-    id: "s1",
-    code: "01A",
-    name: "EXT. NEON ALLEY — NIGHT",
+    id: "s1", code: "01A", name: "EXT. NEON ALLEY — NIGHT",
     desc: "Wide shot. Rain. Reflections in puddles. Distant siren.",
     duration: 4.2,
     bg: "radial-gradient(ellipse at 30% 70%, oklch(45% 0.2 30 / 0.9) 0%, transparent 50%), radial-gradient(ellipse at 70% 40%, oklch(55% 0.2 280 / 0.6) 0%, transparent 60%), linear-gradient(180deg, oklch(12% 0.04 280) 0%, oklch(8% 0.02 250) 100%)",
@@ -49,9 +47,7 @@ const SHOTS: Shot[] = [
     ),
   },
   {
-    id: "s2",
-    code: "02A",
-    name: "INT. APARTMENT — CLOSE ON HANDS",
+    id: "s2", code: "02A", name: "INT. APARTMENT — CLOSE ON HANDS",
     desc: "Close-up. Hands trembling. Cigarette ember pulses.",
     duration: 3.0,
     bg: "radial-gradient(ellipse at 50% 50%, oklch(35% 0.08 50 / 0.8) 0%, transparent 60%), linear-gradient(180deg, oklch(15% 0.03 35) 0%, oklch(8% 0.02 30) 100%)",
@@ -63,9 +59,7 @@ const SHOTS: Shot[] = [
     ),
   },
   {
-    id: "s3",
-    code: "03A",
-    name: "EXT. ROOFTOP — DAWN",
+    id: "s3", code: "03A", name: "EXT. ROOFTOP — DAWN",
     desc: "Silhouette against rising sun. Wide. Slow push-in.",
     duration: 5.4,
     bg: "linear-gradient(180deg, oklch(45% 0.08 25) 0%, oklch(60% 0.15 50) 35%, oklch(75% 0.18 70) 50%, oklch(30% 0.05 35) 75%, oklch(12% 0.02 30) 100%)",
@@ -77,9 +71,7 @@ const SHOTS: Shot[] = [
     ),
   },
   {
-    id: "s4",
-    code: "04A",
-    name: "INT. CAR — MOVING",
+    id: "s4", code: "04A", name: "INT. CAR — MOVING",
     desc: "Two-shot. Headlights sweep across faces. Tracking.",
     duration: 3.8,
     bg: "linear-gradient(180deg, oklch(10% 0.01 250) 0%, oklch(18% 0.03 240) 100%)",
@@ -92,9 +84,7 @@ const SHOTS: Shot[] = [
     ),
   },
   {
-    id: "s5",
-    code: "05A",
-    name: "EXT. BEACH — GOLDEN HOUR",
+    id: "s5", code: "05A", name: "EXT. BEACH — GOLDEN HOUR",
     desc: "Lone figure walks toward camera. Long lens. Heat shimmer.",
     duration: 4.6,
     bg: "linear-gradient(180deg, oklch(70% 0.14 60) 0%, oklch(78% 0.18 50) 40%, oklch(55% 0.15 35) 70%, oklch(35% 0.08 25) 100%)",
@@ -107,9 +97,7 @@ const SHOTS: Shot[] = [
     ),
   },
   {
-    id: "s6",
-    code: "06A",
-    name: "INT. SUBWAY — UNDERGROUND",
+    id: "s6", code: "06A", name: "INT. SUBWAY — UNDERGROUND",
     desc: "Wide. Empty platform. Fluorescent flicker. Distant rumble.",
     duration: 4.0,
     bg: "linear-gradient(180deg, oklch(20% 0.02 200) 0%, oklch(12% 0.01 220) 100%)",
@@ -126,11 +114,11 @@ const SHOTS: Shot[] = [
 
 const TIMELINE_TRACKS = [
   { id: "story", name: "Story", c: "var(--c-story)" },
-  { id: "v1", name: "V1 · Shots", c: "var(--c-shot)" },
-  { id: "v2", name: "V2 · B-Roll", c: "var(--c-shot)" },
-  { id: "a1", name: "A1 · Dialogue", c: "var(--c-sound)" },
-  { id: "a2", name: "A2 · Foley", c: "var(--c-sound)" },
-  { id: "a3", name: "A3 · Score", c: "var(--c-music)" },
+  { id: "v1", name: "V1 \u00B7 Shots", c: "var(--c-shot)" },
+  { id: "v2", name: "V2 \u00B7 B-Roll", c: "var(--c-shot)" },
+  { id: "a1", name: "A1 \u00B7 Dialogue", c: "var(--c-sound)" },
+  { id: "a2", name: "A2 \u00B7 Foley", c: "var(--c-sound)" },
+  { id: "a3", name: "A3 \u00B7 Score", c: "var(--c-music)" },
 ];
 
 function ShotFrame({ shot, scrub = 0 }: { shot: Shot | null; scrub?: number }) {
@@ -138,7 +126,12 @@ function ShotFrame({ shot, scrub = 0 }: { shot: Shot | null; scrub?: number }) {
   return (
     <div
       className="preview__frame"
-      style={{ background: shot.bg, transform: `scale(${1 + scrub * 0.04})`, transformOrigin: "55% 50%", transition: "transform 0.8s ease" }}
+      style={{
+        background: shot.bg,
+        transform: `scale(${1 + scrub * 0.04})`,
+        transformOrigin: "55% 50%",
+        transition: "transform 0.8s ease",
+      }}
     >
       {shot.elements}
     </div>
@@ -165,9 +158,9 @@ export function Studio({ tweaks }: { tweaks: Tweaks }) {
   }, []);
 
   function schedule(fn: () => void, ms: number) {
-    const id = setTimeout(fn, ms);
-    timerRef.current.push(id);
+    timerRef.current.push(setTimeout(fn, ms));
   }
+
   function clearAll() {
     timerRef.current.forEach(clearTimeout);
     timerRef.current = [];
@@ -180,10 +173,12 @@ export function Studio({ tweaks }: { tweaks: Tweaks }) {
     setDoneAgents({});
     setNote(null);
   }
+
   function start() {
     clearAll();
     setPhase("planning");
   }
+
   function reset() {
     clearAll();
     setPhase("idle");
@@ -208,7 +203,6 @@ export function Studio({ tweaks }: { tweaks: Tweaks }) {
     }, delay);
   }
 
-  /* drive the scripted simulation based on phase */
   useEffect(() => {
     if (phase === "idle") return;
 
@@ -270,10 +264,8 @@ export function Studio({ tweaks }: { tweaks: Tweaks }) {
         setPhase("done");
       }, 3200);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase]);
 
-  /* TC ticker */
   useEffect(() => {
     let id: ReturnType<typeof setInterval> | undefined;
     if (phase !== "idle") {
@@ -315,7 +307,7 @@ export function Studio({ tweaks }: { tweaks: Tweaks }) {
         <div className="studio__path">
           <b>FilmWrite</b>
           <span style={{ color: "var(--text-dim)" }}>/</span>
-          <em>untitled_project_03</em>
+          <em>{tweaks.projectName?.toLowerCase().replace(/\s+/g, "_") || "untitled"}</em>
           <span style={{ color: "var(--text-dim)" }}>/</span>
           <span>cut_v04.fwf</span>
         </div>
@@ -332,7 +324,7 @@ export function Studio({ tweaks }: { tweaks: Tweaks }) {
         </div>
       </div>
 
-      {/* TOOLBAR / INPUT */}
+      {/* TOOLBAR */}
       <div className="studio__bar">
         <div className="bar-block">
           <span className="label">Project</span>
@@ -358,14 +350,14 @@ export function Studio({ tweaks }: { tweaks: Tweaks }) {
               placeholder="A getaway driver gets one last job — but the cargo is alive."
             />
             <button type="submit" disabled={!logline.trim() || (phase !== "idle" && phase !== "done")}>
-              {phase === "idle" || phase === "done" ? "GENERATE" : "RUNNING…"}
+              {phase === "idle" || phase === "done" ? "GENERATE" : "RUNNING\u2026"}
             </button>
           </form>
           <div className="suggest">
             {PRESETS.map((p, i) => (
               <button key={i} type="button" onClick={() => setLogline(p)}>
                 {p.slice(0, 48)}
-                {p.length > 48 ? "…" : ""}
+                {p.length > 48 ? "\u2026" : ""}
               </button>
             ))}
           </div>
@@ -381,7 +373,7 @@ export function Studio({ tweaks }: { tweaks: Tweaks }) {
                 <path d="M3 1L0 5l3 4V6h7V4H3z" />
               </svg>
             </button>
-            <button className="play" title="Play" type="button" onClick={start} disabled={phase !== "idle" && phase !== "done"}>
+            <button className="play" title="Generate" type="button" onClick={start} disabled={phase !== "idle" && phase !== "done"}>
               <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor">
                 <path d="M2 0v10l8-5z" />
               </svg>
@@ -390,9 +382,9 @@ export function Studio({ tweaks }: { tweaks: Tweaks }) {
         </div>
       </div>
 
-      {/* BODY: AGENTS · PREVIEW · NOTES */}
+      {/* BODY */}
       <div className="studio__body">
-        {/* Agents */}
+        {/* AGENTS */}
         <div className="panel">
           <div className="panel__head">
             <span className="panel__title">
@@ -424,7 +416,7 @@ export function Studio({ tweaks }: { tweaks: Tweaks }) {
           </div>
         </div>
 
-        {/* Preview */}
+        {/* PREVIEW */}
         <div className="panel preview">
           <div className="panel__head" style={{ background: "oklch(10% 0.01 250)" }}>
             <span className="panel__title">Preview · Program</span>
@@ -476,7 +468,7 @@ export function Studio({ tweaks }: { tweaks: Tweaks }) {
           </div>
         </div>
 
-        {/* Notes */}
+        {/* NOTES */}
         <div className="panel">
           <div className="panel__head">
             <span className="panel__title">Director&apos;s Notes</span>
@@ -584,9 +576,8 @@ function renderClips(
     SHOTS.forEach((s, i) => {
       const isDone = completedShots.includes(s.id);
       const isCurr = phase === "producing" && i === activeShotIdx;
-      const cls = isDone ? "" : isCurr ? "is-rendering" : "is-pending";
       items.push(
-        <div key={s.id} className={`clip ${cls}`} style={{ left: `${i * shotWidth + 0.3}%`, width: `${shotWidth - 0.6}%`, "--c": "var(--c-shot)" } as CSSProperties}>
+        <div key={s.id} className={`clip ${isDone ? "" : isCurr ? "is-rendering" : "is-pending"}`} style={{ left: `${i * shotWidth + 0.3}%`, width: `${shotWidth - 0.6}%`, "--c": "var(--c-shot)" } as CSSProperties}>
           {s.code}
         </div>,
       );
