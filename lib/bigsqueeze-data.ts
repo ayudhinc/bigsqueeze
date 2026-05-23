@@ -19,12 +19,43 @@ export const AGENTS: Agent[] = [
   { id: "editor", name: "Jun Park", role: "Editor", init: "JP", color: "var(--c-edit)" },
 ];
 
-export const PRESETS: string[] = [
+const ALL_LOGLINES = [
   "A getaway driver gets one last job — but the cargo is alive.",
   "On the longest night of the year, a lighthouse keeper hears something that isn't the sea.",
   "Two strangers share a 14-hour layover and decide to invent each other.",
   "A retired magician is hired by a child to make her brother reappear.",
+  "A chef loses his sense of taste the night before the biggest service of his career.",
+  "A coder finds a message from herself — sent from 24 hours in the future.",
+  "A deaf musician discovers she can hear through plants.",
+  "A librarian realizes every book in the fiction section is rewriting itself.",
+  "A grieving father builds a robot to deliver his daughter's eulogy.",
+  "A pen-pal relationship between a nun and a smuggler spans three decades.",
+  "A deep-sea diver encounters a city at the bottom of the Mariana Trench.",
+  "A border guard meets his identical twin on the other side of the crossing.",
+  "A florist starts receiving bouquets addressed to someone who died in 1987.",
+  "A therapist's new patient claims to be God — and gives sessions better than she does.",
+  "Two taxi drivers compete to give the last ride before the city bans cars.",
+  "A grandmother teaches her grandson to hotwire a spaceship.",
+  "A parking lot attendant in Los Angeles remembers every car's story.",
+  "A blind astronomer hears a signal that sounds like breathing.",
+  "A wedding photographer's camera starts showing pictures from yesterday.",
+  "A demolition expert falls in love with the last building she's supposed to bring down.",
+  "A subway conductor discovers the train runs on forgotten memories.",
+  "A beekeeper in a dead town uses her bees to pollinate a stranger's wish.",
 ];
+
+function shuffle<T>(arr: T[]): T[] {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+export function getPresets(count = 4): string[] {
+  return shuffle(ALL_LOGLINES).slice(0, count);
+}
 
 export type PipelineStep = { i: string; t: string; d: string; c: string; who: string };
 

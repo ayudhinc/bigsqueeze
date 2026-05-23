@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
-import { AGENTS, PRESETS } from "@/lib/bigsqueeze-data";
+import { AGENTS, getPresets } from "@/lib/bigsqueeze-data";
 import type { Tweaks } from "@/components/tweaks-panel";
 import type { PipelineEvent, ShotSpec, ShotRender } from "@/lib/pipeline/types";
 
@@ -190,13 +190,14 @@ export function Studio({ tweaks, mode = "demo" }: { tweaks: Tweaks; mode?: "demo
   const [aspect, setAspect] = useState("16:9");
   const [targetLength, setTargetLength] = useState("5s");
   const [renders, setRenders] = useState<Array<{ file: string; url: string; size: number }>>([]);
+  const [presets] = useState(() => getPresets());
 
   const timerRef = useRef<ReturnType<typeof setTimeout>[]>([]);
   const typeRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
-    setLogline((l) => l || PRESETS[0]);
+    setLogline((l) => l || presets[0]);
     fetch("/api/renders").then((r) => r.json()).then(setRenders).catch(() => {});
   }, []);
 
@@ -585,7 +586,7 @@ export function Studio({ tweaks, mode = "demo" }: { tweaks: Tweaks; mode?: "demo
             </button>
           </form>
           <div className="suggest">
-            {PRESETS.map((p, i) => (
+            {presets.map((p, i) => (
               <button key={i} type="button" onClick={() => !isPreview && setLogline(p)}>
                 {p.slice(0, 48)}{p.length > 48 ? "\u2026" : ""}
               </button>

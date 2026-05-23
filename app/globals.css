@@ -293,7 +293,7 @@ section { position: relative; }
 /* top toolbar w/ input and transport */
 .studio__bar {
   display: grid;
-  grid-template-columns: 280px 1fr auto auto;
+  grid-template-columns: 240px 1fr 260px;
   gap: 0;
   border-bottom: 1px solid var(--border);
   background: var(--bg-2);
@@ -1142,9 +1142,8 @@ footer .links { display: flex; gap: 24px; }
 /* responsive --------------------------------------------------------------- */
 
 @media (max-width: 1200px) {
-  .studio__bar { grid-template-columns: 220px 1fr auto auto; }
-
-  .studio__bar { grid-template-columns: 1fr; }
+  .studio__bar { grid-template-columns: 200px 1fr 220px; }
+  .studio__body { grid-template-columns: 200px 1fr 220px; }
   .studio__bar > div + div { border-left: 0; border-top: 1px solid var(--border); }
   .studio__body { grid-template-columns: 1fr; }
   .studio__body > .panel + .panel { border-left: 0; border-top: 1px solid var(--border); }
