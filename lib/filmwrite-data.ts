@@ -30,11 +30,12 @@ export type PipelineStep = { i: string; t: string; d: string; c: string; who: st
 
 export const PIPELINE: PipelineStep[] = [
   { i: "01", t: "Story", d: "Logline expands into a beat sheet, scenes, dialogue. World rules established.", c: "var(--c-story)", who: "Screenwriter" },
-  { i: "02", t: "Boards", d: "Director and DP block coverage. Shot list with lens, lighting, blocking, lens.", c: "var(--c-shot)", who: "Director · DP" },
-  { i: "03", t: "Generation", d: "Shots produced one at a time. Continuity passed between frames, characters, locations.", c: "var(--c-shot)", who: "Shot engine" },
+  { i: "02", t: "Direction", d: "Director blocks coverage. Shot list with lens, lighting, blocking, camera moves.", c: "var(--c-shot)", who: "Director" },
+  { i: "03", t: "Camera", d: "Cinematographer frames each shot. Lighting, focus, composition, camera motion.", c: "var(--c-shot)", who: "Cinematographer" },
   { i: "04", t: "Sound", d: "Foley, atmos, voice acting. ADR matched to mouth movement. Stems mixed.", c: "var(--c-sound)", who: "Sound Designer" },
   { i: "05", t: "Score", d: "Composer scores to picture. Theme variations per character. Stems exported.", c: "var(--c-music)", who: "Composer" },
-  { i: "06", t: "Edit", d: "Editor assembles, color-grades, masters. Delivers ProRes, H.264, captions.", c: "var(--c-edit)", who: "Editor · Colorist" },
+  { i: "06", t: "Color", d: "Colorist grades each shot. Look-up tables, contrast, warmth, skin tones.", c: "var(--c-color)", who: "Colorist" },
+  { i: "07", t: "Edit", d: "Editor assembles, paces, masters. Delivers ProRes 422 HQ, H.264, captions.", c: "var(--c-edit)", who: "Editor" },
 ];
 
 export type Film = {

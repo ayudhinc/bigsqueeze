@@ -14,7 +14,7 @@ export function HowItWorks() {
             <h2 style={{ marginTop: 18 }}>
               One logline.
               <br />
-              Six departments.
+              Seven departments.
               <br />
               One short film.
             </h2>

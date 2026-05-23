@@ -2,51 +2,55 @@
 
 On-disk source of truth for the build sequence. Check items off as we go.
 
-## 0. Foundation  ← (this step)
+## 0. Foundation
 - [x] Architecture/stack doc on disk (`docs/ARCHITECTURE.md`)
 - [x] pnpm enforcement (`package.json` preinstall/engines, `.npmrc`, `.nvmrc`)
 - [x] This TODO on disk
-- [ ] Confirm local node/pnpm versions; pin `packageManager` field
+- [x] Confirm local node/pnpm versions; pin `packageManager` field
 
 ## 1. Scaffold
-- [ ] Next.js App Router + TS + Tailwind, deps added via pnpm (no create-next-app)
-- [ ] Base layout, globals, dark theme
-- [ ] AI SDK + zod installed
-- [ ] `.env.example`: `VIDEO_PROVIDER`, `LLM`, provider keys
+- [x] Next.js App Router + TS + Tailwind, deps added via pnpm (no create-next-app)
+- [x] Base layout, globals, dark theme
+- [x] AI SDK + zod installed
+- [x] `.env.example`: `VIDEO_PROVIDER`, `LLM`, provider keys
 
 ## 2. Provider abstraction (generation)
-- [ ] `VideoProvider` interface: `generateShot(prompt, opts) → { videoUrl, audioUrl, meta }`
-- [ ] `simulated` adapter (keyless, deterministic placeholder clips)
-- [ ] `fal` adapter (LTX-2.3 hosted)        [needs FAL key]
+- [x] `VideoProvider` interface: `generateShot(prompt, opts) → { videoUrl, audioUrl, meta }`
+- [x] `simulated` adapter (keyless, deterministic placeholder clips)
+- [x] `fal` adapter (LTX-2.3 hosted)        [needs FAL key]
 - [ ] `runpod` adapter (self-host LTX-2)     [needs endpoint]
-- [ ] LLM wrapper (AI SDK, gateway model strings)
+- [x] LLM wrapper (AI SDK, gateway model strings)
 
-## 3. The swarm (agents)
-- [ ] Writer (idea → treatment + beats)
-- [ ] Shot Breakdown (→ typed/zod shot list)
-- [ ] Prompt Smith (shot → LTX-2 prompt)
-- [ ] Critic/QC (review + bounded retry)
-- [ ] Director/orchestrator (sequences, streams progress)
+## 3. The swarm (7 agents)
+- [x] Screenwriter (idea → treatment + beats)
+- [x] Director (coverage, shot blocks, lens/blocking choices)
+- [x] Cinematographer (shot framing, lighting, camera motion)
+- [x] Sound Designer (foley, atmos, ADR, stems)
+- [x] Composer (score, theme variations, stems)
+- [x] Colorist (grade, LUTs, contrast, skin tones)
+- [x] Editor (assemble, pace, master — ProRes, H.264, captions)
+- [x] Director/orchestrator (sequences, streams progress)
 
 ## 4. Pipeline + streaming
-- [ ] Orchestrator endpoint (stream events: agent steps + shot states)
-- [ ] SSE/stream plumbing to UI
+- [x] Orchestrator endpoint (`POST /api/direct`, SSE stream)
+- [x] Studio route (`/studio`) with agent feed + timeline UI (scripted sim, not yet wired)
 
 ## 5. Assembly
 - [ ] ffmpeg concat + audio mux → `film.mp4`
 - [ ] Output `manifest.json` (shots, prompts, providers, timings)
 
 ## 6. UI (the demo)
-- [ ] Input: logline/script
-- [ ] Live timeline: agent feed + per-shot render cards (queued→rendering→ready)
+- [x] Input: logline/script (Studio logline bar + preset suggestions)
+- [x] Live timeline: agent feed + per-shot render cards (queued→rendering→ready)
+- [ ] Wire Studio to real pipeline (`/studio` still runs scripted sim, not `POST /api/direct`)
 - [ ] Final film player + download
 
 ## 7. Real LTX-2
-- [ ] Wire chosen provider (fal or runpod) end-to-end
+- [ ] Wire chosen provider (fal or runpod) end-to-end [needs keys]
 - [ ] Reference-image conditioning for shot consistency
 
 ## 8. Polish / demo
-- [ ] Seed example loglines
+- [x] Seed example loglines
 - [ ] Pre-rendered fallback for stage demo (latency safety)
 - [ ] README + run instructions
 - [ ] (optional) Deploy to Vercel

@@ -46,7 +46,7 @@ export function Hero({ tweaks }: { tweaks: Tweaks }) {
             </div>
             <div className="row">
               <span>Crew</span>
-              <span>7 named agents · 1 director (you)</span>
+              <span>7 agents · 1 director (you)</span>
             </div>
           </div>
         </div>
