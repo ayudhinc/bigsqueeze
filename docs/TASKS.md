@@ -44,7 +44,7 @@ On-disk source of truth for the build sequence. Check items off as we go.
 - [x] Input: logline/script (Studio logline bar + preset suggestions)
 - [x] Live timeline: agent feed + per-shot render cards (queued→rendering→ready)
 - [x] Wire Studio to real pipeline (`/studio` runs `POST /api/direct` when `mode="live"`)
-- [ ] Final film player + download
+- [x] Final film player + download
 
 ## 7. Real LTX-2
 - [ ] Wire chosen provider (fal or runpod) end-to-end [needs keys]

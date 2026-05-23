@@ -178,6 +178,7 @@ export function Studio({ tweaks, mode = "demo" }: { tweaks: Tweaks; mode?: "demo
   /* live-mode state */
   const [liveShots, setLiveShots] = useState<LiveShot[]>([]);
   const [pipelineError, setPipelineError] = useState<string | null>(null);
+  const [filmUrl, setFilmUrl] = useState<string | null>(null);
 
   const timerRef = useRef<ReturnType<typeof setTimeout>[]>([]);
   const typeRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -205,6 +206,7 @@ export function Studio({ tweaks, mode = "demo" }: { tweaks: Tweaks; mode?: "demo
     setDoneAgents({});
     setNote(null);
     setPipelineError(null);
+    setFilmUrl(null);
     setLiveShots([]);
   }
 
@@ -396,6 +398,7 @@ export function Studio({ tweaks, mode = "demo" }: { tweaks: Tweaks; mode?: "demo
       }
       case "film":
         setPhase("done");
+        setFilmUrl(event.url ?? null);
         streamNoteFromAgent("editor", "All shots complete. Master assembled.");
         setPlayhead(100);
         break;
@@ -650,10 +653,31 @@ export function Studio({ tweaks, mode = "demo" }: { tweaks: Tweaks; mode?: "demo
                 </div>
               )}
               {phase === "done" && (
-                <div style={{ marginTop: 8, fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--live)", letterSpacing: "0.06em" }}>
-                  {pipelineError
-                    ? `\u2717 Pipeline error: ${pipelineError}`
-                    : "\u2713 Master delivered · cut_v04.mp4 · all shots complete"}
+                <div style={{ marginTop: 8 }}>
+                  {pipelineError ? (
+                    <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--red)", letterSpacing: "0.06em" }}>
+                      {'\u2717'} Pipeline error: {pipelineError}
+                    </span>
+                  ) : filmUrl ? (
+                    <div className="film-player">
+                      <video
+                        src={filmUrl}
+                        controls
+                        style={{ width: "100%", borderRadius: 6, maxHeight: 320 }}
+                      />
+                      <a
+                        href={filmUrl}
+                        download
+                        className="dl-btn"
+                      >
+                        {'\u2B07'} Download MP4
+                      </a>
+                    </div>
+                  ) : (
+                    <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--live)", letterSpacing: "0.06em" }}>
+                      {'\u2713'} Master delivered · all shots complete
+                    </span>
+                  )}
                 </div>
               )}
             </div>
