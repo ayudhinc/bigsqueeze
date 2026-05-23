@@ -20,6 +20,7 @@ On-disk source of truth for the build sequence. Check items off as we go.
 - [x] `fal` adapter (LTX-2.3 hosted)        [needs FAL key]
 - [ ] `runpod` adapter (self-host LTX-2)     [needs endpoint]
 - [x] LLM wrapper (AI SDK, gateway model strings)
+- [x] Groq inference via `@ai-sdk/openai` (OpenAI-compatible)  [needs GROQ_API_KEY]
 
 ## 3. The swarm (7 agents)
 - [x] Screenwriter (idea → treatment + beats)
