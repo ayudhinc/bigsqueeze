@@ -121,10 +121,13 @@ const DEMO_SHOTS: DemoShot[] = [
 ];
 
 const AGENT_MAP: Record<string, string> = {
-  Writer: "writer",
-  "Shot Designer": "director",
-  "Prompt Smith": "dp",
-  Critic: "editor",
+  Screenwriter: "writer",
+  Director: "director",
+  Cinematographer: "dp",
+  "Sound Designer": "sound",
+  Composer: "score",
+  Colorist: "color",
+  Editor: "editor",
 };
 
 /* ── Shared sub-components ─────────────────────────────────────────────── */

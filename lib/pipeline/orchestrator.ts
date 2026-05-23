@@ -1,66 +1,42 @@
-import type { PipelineEvent, FilmManifest, ShotRender } from "./types";
-import { writeTreatment } from "@/lib/agents/writer";
-import { breakIntoShots } from "@/lib/agents/shotBreakdown";
-import { writeShotPrompt } from "@/lib/agents/promptSmith";
-import { critiqueShot } from "@/lib/agents/critic";
-import { getVideoProvider } from "@/lib/providers/video";
+import type { PipelineEvent } from "./types";
+import { createFilmGraph } from "./graph";
+
+type GraphResult = { ok: true } | { ok: false; error: Error };
 
 /**
- * The Director: sequences the swarm and yields a stream of events for the live
- * timeline. Writer → Shot Designer → per shot (Prompt Smith → Render → Critic).
+ * The Director: runs the full filmmaking pipeline as a LangGraph state
+ * machine and yields a stream of PipelineEvents for the live timeline UI.
+ *
+ * Graph topology:
+ *   Screenwriter → Director → [per shot: Cinematographer → Renderer →
+ *   Post-production (Sound+Score+Color in parallel) → QC retry loop] →
+ *   Editor → done
  */
 export async function* runPipeline(idea: string): AsyncGenerator<PipelineEvent> {
-  const provider = getVideoProvider();
+  const events: PipelineEvent[] = [];
 
-  try {
-    // 1. Writer
-    yield { type: "agent", agent: "Writer", status: "start" };
-    const treatment = await writeTreatment(idea);
-    yield { type: "treatment", treatment };
-    yield { type: "agent", agent: "Writer", status: "done", message: treatment.logline };
+  const emit = (e: PipelineEvent) => {
+    events.push(e);
+  };
 
-    // 2. Shot Designer
-    yield { type: "agent", agent: "Shot Designer", status: "start" };
-    const shots = await breakIntoShots(treatment);
-    yield { type: "shots", shots };
-    yield { type: "agent", agent: "Shot Designer", status: "done", message: `${shots.length} shots` };
+  /* Build and start the graph (event-emit callbacks fire inside nodes). */
+  const graph = createFilmGraph(emit);
+  const result: GraphResult = await graph
+    .invoke({ idea })
+    .then(() => ({ ok: true as const }))
+    .catch((err: unknown) => ({
+      ok: false as const,
+      error: err instanceof Error ? err : new Error(String(err)),
+    }));
 
-    const style = `${treatment.logline} — ${treatment.synopsis}`;
-    const manifestShots: FilmManifest["shots"] = [];
+  /* Yield all accumulated events. */
+  for (const event of events) {
+    yield event;
+  }
 
-    // 3. Per shot: Prompt Smith → Render → Critic
-    for (const shot of shots) {
-      yield { type: "shot", shotId: shot.id, status: "queued" };
-
-      yield { type: "agent", agent: "Prompt Smith", status: "start", message: `shot ${shot.index + 1}` };
-      const prompt = await writeShotPrompt(shot, style);
-      yield { type: "agent", agent: "Prompt Smith", status: "done", message: prompt };
-
-      yield { type: "shot", shotId: shot.id, status: "rendering" };
-      let render: ShotRender | undefined;
-      try {
-        render = await provider.generateShot({ prompt, shot });
-        yield { type: "shot", shotId: shot.id, status: "ready", render };
-      } catch (err) {
-        yield { type: "shot", shotId: shot.id, status: "failed" };
-        yield { type: "error", message: `Shot ${shot.index + 1} render failed: ${(err as Error).message}` };
-      }
-
-      yield { type: "agent", agent: "Critic", status: "start", message: `shot ${shot.index + 1}` };
-      const note = await critiqueShot(shot, prompt);
-      yield { type: "agent", agent: "Critic", status: "done", message: note.note };
-
-      manifestShots.push({ shot, prompt, render });
-    }
-
-    const manifest: FilmManifest = {
-      logline: treatment.logline,
-      shots: manifestShots,
-      provider: provider.name,
-      createdAt: new Date().toISOString(),
-    };
-    yield { type: "film", manifest };
-  } catch (err) {
-    yield { type: "error", message: (err as Error).message };
+  /* Surface any graph-level error at the end. */
+  if (!result.ok) {
+    yield { type: "error", message: result.error.message };
+    throw result.error;
   }
 }
