@@ -20,10 +20,12 @@ export class FalVideoProvider implements VideoProvider {
 
   async generateShot(input: GenerateShotInput): Promise<ShotRender> {
     const { shot } = input;
+    const modelInput: Record<string, unknown> = { prompt: input.prompt };
+    if (input.aspect) modelInput.aspect_ratio = input.aspect;
+    const frames = Math.round(shot.durationSec * 24);
+    modelInput.num_frames = Math.min(Math.max(frames, 25), 481);
     const result = await fal.subscribe(this.model, {
-      input: {
-        prompt: input.prompt,
-      },
+      input: modelInput,
     });
 
     const data =

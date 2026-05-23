@@ -16,14 +16,16 @@ export class SimulatedVideoProvider implements VideoProvider {
     const hue = h % 360;
     const hue2 = (hue + 40) % 360;
 
-    const caption = wrap(escapeXml(shot.description || prompt), 42)
+    const { w, h: svgH } = aspectDimensions(input.aspect ?? "16:9");
+    const caption = wrap(escapeXml(shot.description || prompt), Math.round(w / 30))
       .map(
         (ln, i) =>
-          `<text x="60" y="${320 + i * 36}" font-family="ui-sans-serif, system-ui" font-size="26" fill="rgba(255,255,255,0.92)">${ln}</text>`,
+          `<text x="${w * 0.05}" y="${svgH * 0.5 + i * (svgH * 0.05)}" font-family="ui-sans-serif, system-ui" font-size="${svgH * 0.036}" fill="rgba(255,255,255,0.92)">${ln}</text>`,
       )
       .join("");
 
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720">
+    const cx = w * 0.77, cy = svgH * 0.28, r = svgH * 0.17;
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${svgH}" viewBox="0 0 ${w} ${svgH}">
   <defs>
     <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="hsl(${hue} 70% 22%)">
@@ -32,13 +34,13 @@ export class SimulatedVideoProvider implements VideoProvider {
       <stop offset="1" stop-color="hsl(${hue2} 70% 14%)"/>
     </linearGradient>
   </defs>
-  <rect width="1280" height="720" fill="url(#g)"/>
-  <circle cx="980" cy="200" r="120" fill="hsl(${hue2} 80% 60% / 0.22)">
-    <animate attributeName="cy" values="200;250;200" dur="5s" repeatCount="indefinite"/>
+  <rect width="${w}" height="${svgH}" fill="url(#g)"/>
+  <circle cx="${cx}" cy="${cy}" r="${r}" fill="hsl(${hue2} 80% 60% / 0.22)">
+    <animate attributeName="cy" values="${cy};${cy + svgH * 0.07};${cy}" dur="5s" repeatCount="indefinite"/>
   </circle>
-  <text x="60" y="110" font-family="ui-monospace, monospace" font-size="20" fill="rgba(255,255,255,0.5)" letter-spacing="3">SHOT ${String(shot.index + 1).padStart(2, "0")} · ${shot.durationSec}s · SIM</text>
+  <text x="${w * 0.05}" y="${svgH * 0.15}" font-family="ui-monospace, monospace" font-size="${svgH * 0.028}" fill="rgba(255,255,255,0.5)" letter-spacing="3">SHOT ${String(shot.index + 1).padStart(2, "0")} · ${shot.durationSec}s · SIM</text>
   ${caption}
-  <text x="60" y="660" font-family="ui-monospace, monospace" font-size="16" fill="rgba(255,255,255,0.4)">${escapeXml([shot.camera, shot.mood].filter(Boolean).join(" · "))}</text>
+  <text x="${w * 0.05}" y="${svgH * 0.92}" font-family="ui-monospace, monospace" font-size="${svgH * 0.022}" fill="rgba(255,255,255,0.4)">${escapeXml([shot.camera, shot.mood].filter(Boolean).join(" · "))}</text>
 </svg>`;
 
     // Simulate render latency so the live timeline feels real.
@@ -91,4 +93,13 @@ function wrap(text: string, max: number): string[] {
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function aspectDimensions(aspect: string): { w: number; h: number } {
+  const parts = aspect.split(":").map(Number);
+  const ratio = parts[0] / parts[1];
+  if (ratio >= 1) {
+    return { w: 1280, h: Math.round(1280 / ratio) };
+  }
+  return { w: Math.round(720 * ratio), h: 720 };
 }

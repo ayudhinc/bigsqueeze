@@ -98,7 +98,7 @@ export function createFilmGraph(emit: (e: PipelineEvent) => void, provider?: Vid
   /* ── 2. Director — treatment → shot list ─────────────────────────────── */
   async function directorNode(st: St): Promise<Up> {
     emit({ type: "agent", agent: "Director", status: "start" });
-    const shots = await breakIntoShots(st.treatment!);
+    const shots = await breakIntoShots(st.treatment!, st.targetLength);
     emit({ type: "shots", shots });
     emit({
       type: "agent",
@@ -130,7 +130,7 @@ export function createFilmGraph(emit: (e: PipelineEvent) => void, provider?: Vid
     const shot = currentShot(st);
     emit({ type: "shot", shotId: shot.id, status: "rendering" });
     try {
-      const render = await _provider.generateShot({ prompt: st.prompt ?? "", shot });
+      const render = await _provider.generateShot({ prompt: st.prompt ?? "", shot, aspect: st.aspect });
       emit({ type: "shot", shotId: shot.id, status: "ready", render });
       return {
         shotResults: {

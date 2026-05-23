@@ -26,8 +26,16 @@ const CAMERAS = [
 ];
 const MOODS = ["serene", "tense", "wondrous", "melancholic", "triumphant", "eerie"];
 
+function parseTargetLength(val: string): number {
+  const m = val.match(/^(\d+)(?:s|min)?$/);
+  if (!m) return 30;
+  const n = parseInt(m[1], 10);
+  return val.includes("min") ? n * 60 : n;
+}
+
 /** Shot Designer agent: treatment → ordered, filmable shot list. */
-export async function breakIntoShots(treatment: Treatment): Promise<ShotSpec[]> {
+export async function breakIntoShots(treatment: Treatment, targetLength = "30s"): Promise<ShotSpec[]> {
+  const totalTarget = parseTargetLength(targetLength);
   let raw: Array<{ description: string; durationSec: number; camera: string; mood: string }>;
 
   if (hasLLM()) {
@@ -47,11 +55,14 @@ export async function breakIntoShots(treatment: Treatment): Promise<ShotSpec[]> 
     }));
   }
 
+  const totalRaw = raw.reduce((s, x) => s + x.durationSec, 0);
+  const factor = totalTarget / totalRaw;
+
   return raw.map((s, i) => ({
     id: `shot-${i + 1}`,
     index: i,
     description: s.description,
-    durationSec: Math.round(s.durationSec),
+    durationSec: Math.max(2, Math.min(60, Math.round(s.durationSec * factor))),
     camera: s.camera,
     mood: s.mood,
   }));

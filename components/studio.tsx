@@ -457,7 +457,7 @@ export function Studio({ tweaks, mode = "demo" }: { tweaks: Tweaks; mode?: "demo
   useEffect(() => {
     if (isPreview) return;
     let id: ReturnType<typeof setInterval> | undefined;
-    if (phase !== "idle") {
+    if (phase !== "idle" && phase !== "done") {
       const t0 = Date.now();
       id = setInterval(() => {
         const t = (Date.now() - t0) / 1000;
