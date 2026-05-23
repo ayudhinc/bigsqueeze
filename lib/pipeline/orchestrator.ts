@@ -37,7 +37,7 @@ export async function* runPipeline(
   let graphError: string | null = null;
 
   /* Run the graph in a background promise while we yield events as they arrive. */
-  const runGraph = graph
+  void graph
     .invoke({ idea, aspect, targetLength })
     .then(() => { graphDone = true; })
     .catch((err: unknown) => {

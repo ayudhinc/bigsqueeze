@@ -199,6 +199,7 @@ export function Studio({ tweaks, mode = "demo" }: { tweaks: Tweaks; mode?: "demo
   useEffect(() => {
     setLogline((l) => l || presets[0]);
     fetch("/api/renders").then((r) => r.json()).then(setRenders).catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   /* helpers */
@@ -270,27 +271,28 @@ export function Studio({ tweaks, mode = "demo" }: { tweaks: Tweaks; mode?: "demo
 
     if (phase === "producing") {
       setActiveAgents((a) => ({ ...a, director: true, dp: true }));
+      const shotMs = 2800;
       DEMO_SHOTS.forEach((shot, i) => {
-        const base = i * 1900;
+        const base = i * shotMs;
         schedule(() => {
           setActiveShotIdx(i);
           setRenderPct(0);
           streamNote("dp", `Rendering ${shot.code} — ${shot.name}. ${shot.desc}`, 0);
         }, base);
-        [10, 25, 40, 55, 70, 85, 100].forEach((p, k) => {
-          schedule(() => setRenderPct(p), base + 200 + k * 180);
+        [10, 20, 35, 50, 65, 80, 100].forEach((p, k) => {
+          schedule(() => setRenderPct(p), base + 300 + k * 320);
         });
         schedule(() => {
           setCompletedShots((c) => [...c, shot.id]);
           setPlayhead(Math.min(100, ((i + 1) / DEMO_SHOTS.length) * 60));
-        }, base + 1700);
+        }, base + 2300);
       });
-      const total = DEMO_SHOTS.length * 1900;
+      const total = DEMO_SHOTS.length * shotMs;
       schedule(() => {
         setDoneAgents((d) => ({ ...d, director: true, dp: true }));
         setActiveAgents((a) => ({ ...a, director: false, dp: false }));
         setPhase("mixing");
-      }, total + 200);
+      }, total + 400);
     }
 
     if (phase === "mixing") {
@@ -302,20 +304,20 @@ export function Studio({ tweaks, mode = "demo" }: { tweaks: Tweaks; mode?: "demo
         setDoneAgents((d) => ({ ...d, sound: true, score: true, color: true }));
         setActiveAgents((a) => ({ ...a, sound: false, score: false, color: false }));
         setPhase("editing");
-      }, 4800);
+      }, 6000);
     }
 
     if (phase === "editing") {
       setActiveAgents((a) => ({ ...a, editor: true }));
-      streamNote("editor", "Locking cut. Color grade: cool shadows, warm midtones, lifted blacks. Delivered ProRes 422 HQ + H.264.", 0);
+      streamNote("editor", "Locking cut. Color grade: cool shadows, warm midtones, lifted blacks. Delivered MP4 + H.264.", 0);
       schedule(() => setPlayhead(100), 1200);
       schedule(() => {
         setDoneAgents((d) => ({ ...d, editor: true }));
         setActiveAgents((a) => ({ ...a, editor: false }));
         setPhase("done");
-      }, 3200);
+      }, 4000);
     }
-  }, [phase, isDemo, streamNote]);
+  }, [phase, isDemo, streamNote, isPreview]);
 
   /* ── LIVE: real pipeline via SSE ────────────────────────────────────── */
   const startLive = useCallback(async () => {
@@ -466,7 +468,7 @@ export function Studio({ tweaks, mode = "demo" }: { tweaks: Tweaks; mode?: "demo
       setTc("00:00:00:00");
     }
     return () => { if (id) clearInterval(id); };
-  }, [phase]);
+  }, [phase, isPreview]);
 
   /* ── derived display values ─────────────────────────────────────────── */
   const stripCells = useMemo(() => {
@@ -489,13 +491,19 @@ export function Studio({ tweaks, mode = "demo" }: { tweaks: Tweaks; mode?: "demo
       isCurrent: ls.status === "rendering",
       isEmpty: ls.status === "queued",
     }));
-  }, [isDemo, completedShots, activeShotIdx, phase, liveShots]);
+  }, [isDemo, completedShots, activeShotIdx, phase, liveShots, isPreview]);
 
   const shotCount = isDemo ? DEMO_SHOTS.length : liveShots.length;
 
   /* current preview shot */
   const demoCurrentShot = phase === "idle" ? null : DEMO_SHOTS[Math.min(activeShotIdx, DEMO_SHOTS.length - 1)];
   const liveCurrentShot = liveShots[Math.min(activeShotIdx, liveShots.length - 1)];
+  const getActiveAgentName = () => {
+    const id = Object.entries(activeAgents).find(([, v]) => v)?.[0];
+    if (!id) return "";
+    const a = AGENTS.find((x) => x.id === id);
+    return a ? `${a.role} · ${a.name}` : "";
+  };
 
   const phaseLabel = phase === "running" ? "RUNNING" : phase === "idle" ? "READY" : phase.toUpperCase();
 
@@ -654,19 +662,19 @@ export function Studio({ tweaks, mode = "demo" }: { tweaks: Tweaks; mode?: "demo
             {!isDemo && liveCurrentShot?.render && <LiveShotFrame url={liveCurrentShot.render.url} alt={liveCurrentShot.spec.description} kind={liveCurrentShot.render.kind} />}
             {!demoCurrentShot && !liveCurrentShot && (
               <div className="preview__placeholder">
-                {pipelineError ? `Error: ${pipelineError}` : "— No signal · paste a logline to begin —"}
+                {pipelineError ? `Error: ${pipelineError}` : phase === "running" ? "— Pipeline running · waiting for first shot —" : "— No signal · paste a logline to begin —"}
               </div>
             )}
             <div className="preview__overlay">
               <div className="corners">
-                <div>● REC <b>·</b> {isDemo ? (demoCurrentShot?.code || "—") : (liveCurrentShot ? String(liveCurrentShot.spec.index + 1).padStart(2, "0") : "—")}</div>
+                <div>● REC <b>·</b> {isDemo ? (demoCurrentShot?.code || "—") : (liveCurrentShot ? String(liveCurrentShot.spec.index + 1).padStart(2, "0") : phase === "running" ? "—" : "—")}</div>
                 <div>{tc}<br /><span style={{ color: "oklch(100% 0 0 / 0.5)" }}>24.000 fps</span></div>
               </div>
               <div className="bottom">
                 <div>
-                  <b>{isDemo ? (demoCurrentShot?.name || "—") : (liveCurrentShot?.spec.description || "—")}</b>
+                  <b>{isDemo ? (demoCurrentShot?.name || "—") : (liveCurrentShot?.spec.description || phase === "running" ? "Awaiting shots from director..." : "—")}</b>
                   <div style={{ opacity: 0.7, marginTop: 2 }}>
-                    {isDemo ? (demoCurrentShot?.desc || "") : (liveCurrentShot ? [liveCurrentShot.spec.camera, liveCurrentShot.spec.mood].filter(Boolean).join(" · ") : "")}
+                    {isDemo ? (demoCurrentShot?.desc || "") : (liveCurrentShot ? [liveCurrentShot.spec.camera, liveCurrentShot.spec.mood].filter(Boolean).join(" · ") : phase === "running" ? getActiveAgentName() : "")}
                   </div>
                 </div>
                 <div className="right">

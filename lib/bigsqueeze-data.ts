@@ -44,17 +44,31 @@ const ALL_LOGLINES = [
   "A beekeeper in a dead town uses her bees to pollinate a stranger's wish.",
 ];
 
-function shuffle<T>(arr: T[]): T[] {
+function seededRandom(seed: number): () => number {
+  let s = seed;
+  return () => {
+    s = (s * 1664525 + 1013904223) & 0xffffffff;
+    return (s >>> 0) / 0xffffffff;
+  };
+}
+
+function seededShuffle<T>(arr: readonly T[], seed: number): T[] {
   const a = [...arr];
+  const rng = seededRandom(seed);
   for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
+    const j = Math.floor(rng() * (i + 1));
     [a[i], a[j]] = [a[j], a[i]];
   }
   return a;
 }
 
+function dateSeed(): number {
+  const d = new Date();
+  return d.getUTCFullYear() * 10000 + (d.getUTCMonth() + 1) * 100 + d.getUTCDate();
+}
+
 export function getPresets(count = 4): string[] {
-  return shuffle(ALL_LOGLINES).slice(0, count);
+  return seededShuffle(ALL_LOGLINES, dateSeed()).slice(0, count);
 }
 
 export type PipelineStep = { i: string; t: string; d: string; c: string; who: string };
