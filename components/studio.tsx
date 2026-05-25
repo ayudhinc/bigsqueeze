@@ -183,7 +183,7 @@ export function Studio({ tweaks, mode = "demo" }: { tweaks: Tweaks; mode?: "demo
   liveShotsRef.current = liveShots;
   const [pipelineError, setPipelineError] = useState<string | null>(null);
   const [filmUrl, setFilmUrl] = useState<string | null>(null);
-  const [provider, setProvider] = useState("simulated");
+  const [provider, setProvider] = useState("fal/ltx-2");
   const [aspect, setAspect] = useState("9:16");
   const [resolution, setResolution] = useState("720p");
   const [targetLength, setTargetLength] = useState("5s");
@@ -526,7 +526,6 @@ export function Studio({ tweaks, mode = "demo" }: { tweaks: Tweaks; mode?: "demo
               <option value="simulated">Simulated</option>
               <option value="fal/seedance-2.0">Seedance 2.0</option>
               <option value="fal/ltx-2">LTX-2</option>
-              <option value="runpod/ltx-2" disabled>Runpod</option>
             </select>
             <span className="live-chip"><i />{currentStage || phaseLabel}
               {stageIdx >= 0 && (
