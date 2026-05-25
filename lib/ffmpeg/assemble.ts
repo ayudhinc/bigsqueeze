@@ -76,7 +76,7 @@ export function assembleFilm(manifest: FilmManifest): string {
       }
       if (existsSync(videoPath)) {
         execSync(
-          `ffmpeg -y -i "${videoPath}" -c copy -an -t ${Math.max(2, shot.durationSec)} "${segPath}" 2>/dev/null`,
+          `ffmpeg -y -i "${videoPath}" -c copy -an "${segPath}" 2>/dev/null`,
         );
         segments.push(segPath);
         continue;
