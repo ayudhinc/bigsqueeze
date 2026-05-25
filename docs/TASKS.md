@@ -57,8 +57,23 @@ On-disk source of truth for the build sequence. Check items off as we go.
 
 ## 7. Real LTX-2
 - [x] Wire chosen provider (fal or runpod) end-to-end [needs keys]
-- [x] Provider dropdown in Studio UI (simulated / fal/seedance-2.0 / fal/ltx-2 / runpod/ltx-2 disabled)
-- [ ] Reference-image conditioning for shot consistency
+- [x] Provider dropdown in Studio UI (simulated / fal/seedance-2.0 / fal/ltx-2)
+- [x] Reference-image conditioning for shot consistency
+- [x] Model-specific fal parameters (LTX-2 uses duration/resolution, Seedance uses aspect_ratio)
+- [x] Fix stale closure: provider/format/length/resolution not reflected in POST body
+
+## 7.1 Pipeline plumbing
+- [x] Shot download: save each render to public/renders/{runId}/shot-{n}.mp4 before assembly
+- [x] Resolution parameter threaded through Studio → API → orchestrator → graph → providers
+- [x] Even-dimension guard for libx264 compatibility (odd widths like 405 → 406)
+- [x] SVG assembly uses actual SVG dimensions instead of hardcoded 1280x720
+- [x] Simulated SVG animation timing matches shot.durationSec
+
+## 7.2 UI enhancements
+- [x] Scrollable process log (replaces single typing-note)
+- [x] Timeline V1 clips clickable — sets active shot in viewport
+- [x] Target length dropdown moved to its own row to prevent overflow
+- [x] Removed disabled Runpod option; default provider = simulated
 
 ## 8. Polish / demo
 - [x] Seed example loglines
