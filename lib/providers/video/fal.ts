@@ -21,14 +21,7 @@ export class FalVideoProvider implements VideoProvider {
   async generateShot(input: GenerateShotInput): Promise<ShotRender> {
     const { shot } = input;
     const modelInput: Record<string, unknown> = { prompt: input.prompt };
-    if (input.aspect) {
-      modelInput.aspect_ratio = input.aspect;
-      if (input.resolution) {
-        const { w, h } = aspectRes(input.aspect, input.resolution);
-        modelInput.width = w;
-        modelInput.height = h;
-      }
-    }
+    if (input.aspect) modelInput.aspect_ratio = input.aspect;
     const frames = Math.round(shot.durationSec * 24);
     modelInput.num_frames = Math.min(Math.max(frames, 25), 481);
     const result = await fal.subscribe(this.model, {
@@ -51,15 +44,4 @@ export class FalVideoProvider implements VideoProvider {
       meta: { model: this.model },
     };
   }
-}
-
-function aspectRes(aspect: string, resolution: string): { w: number; h: number } {
-  const parts = aspect.split(":").map(Number);
-  const ratio = parts[0] / parts[1];
-  const h = parseInt(resolution.replace("p", ""), 10) || 720;
-  let w = Math.round(h * ratio);
-  let hh = h;
-  if (w % 2) w++;
-  if (hh % 2) hh++;
-  return { w, h: hh };
 }
