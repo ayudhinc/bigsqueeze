@@ -797,6 +797,7 @@ export function Studio({ tweaks, mode = "demo" }: { tweaks: Tweaks; mode?: "demo
         playhead={playhead}
         shotIds={liveShots.map((ls) => ls.spec.id)}
         shotCount={shotCount}
+        onSelectShot={setActiveShotIdx}
       />
     </div>
   );
@@ -821,6 +822,7 @@ function Timeline({
   playhead,
   shotIds,
   shotCount,
+  onSelectShot,
 }: {
   isDemo: boolean;
   phase: Phase;
@@ -829,6 +831,7 @@ function Timeline({
   playhead: number;
   shotIds: string[];
   shotCount: number;
+  onSelectShot?: (index: number) => void;
 }) {
   const shotWidth = 100 / shotCount;
   const ticks = Array.from({ length: 11 }, (_, i) => i);
@@ -853,7 +856,7 @@ function Timeline({
             <span className="controls"><b>M</b><b>S</b><b>R</b></span>
           </div>
           <div className="track__lane">
-            {renderClips(track.id, { isDemo, phase, completedShots, activeShotIdx, shotWidth, shotCount, shotIds })}
+            {renderClips(track.id, { isDemo, phase, completedShots, activeShotIdx, shotWidth, shotCount, shotIds, onSelectShot })}
             <div className="playhead" style={{ left: `${playhead}%` }} />
           </div>
         </div>
@@ -864,9 +867,9 @@ function Timeline({
 
 function renderClips(
   trackId: string,
-  ctx: { isDemo: boolean; phase: Phase; completedShots: string[]; activeShotIdx: number; shotWidth: number; shotCount: number; shotIds: string[] },
+  ctx: { isDemo: boolean; phase: Phase; completedShots: string[]; activeShotIdx: number; shotWidth: number; shotCount: number; shotIds: string[]; onSelectShot?: (index: number) => void },
 ): ReactNode[] {
-  const { isDemo, phase, completedShots, activeShotIdx, shotWidth, shotCount, shotIds } = ctx;
+  const { isDemo, phase, completedShots, activeShotIdx, shotWidth, shotCount, shotIds, onSelectShot } = ctx;
   const items: ReactNode[] = [];
 
   if (trackId === "story") {
@@ -886,7 +889,7 @@ function renderClips(
       const isDone = completedShots.includes(s.id);
       const isCurr = (isDemo ? phase === "producing" : phase === "running") && i === activeShotIdx;
       items.push(
-        <div key={s.id} className={`clip ${isDone ? "" : isCurr ? "is-rendering" : "is-pending"}`} style={{ left: `${i * shotWidth + 0.3}%`, width: `${shotWidth - 0.6}%`, "--c": "var(--c-shot)" } as CSSProperties}>
+        <div key={s.id} className={`clip ${isDone ? "" : isCurr ? "is-rendering" : "is-pending"}`} style={{ left: `${i * shotWidth + 0.3}%`, width: `${shotWidth - 0.6}%`, "--c": "var(--c-shot)" } as CSSProperties} onClick={() => onSelectShot?.(i)}>
           {s.code}
         </div>,
       );

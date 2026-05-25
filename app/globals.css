@@ -744,7 +744,7 @@ section { position: relative; }
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
-  cursor: default;
+  cursor: pointer;
 }
 .clip.is-rendering {
   background: repeating-linear-gradient(
