@@ -57,6 +57,9 @@ function aspectRes(aspect: string, resolution: string): { w: number; h: number }
   const parts = aspect.split(":").map(Number);
   const ratio = parts[0] / parts[1];
   const h = parseInt(resolution.replace("p", ""), 10) || 720;
-  const w = Math.round(h * ratio);
-  return { w, h };
+  let w = Math.round(h * ratio);
+  let hh = h;
+  if (w % 2) w++;
+  if (hh % 2) hh++;
+  return { w, h: hh };
 }

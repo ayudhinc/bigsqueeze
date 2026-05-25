@@ -101,6 +101,9 @@ function aspectDimensions(aspect: string, resolution: string): { w: number; h: n
   const parts = aspect.split(":").map(Number);
   const ratio = parts[0] / parts[1];
   const targetH = parseInt(resolution.replace("p", ""), 10) || 720;
-  const w = Math.round(targetH * ratio);
-  return { w, h: targetH };
+  let w = Math.round(targetH * ratio);
+  let h = targetH;
+  if (w % 2) w++;
+  if (h % 2) h++;
+  return { w, h };
 }

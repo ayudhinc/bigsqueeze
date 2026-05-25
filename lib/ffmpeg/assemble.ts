@@ -15,13 +15,16 @@ function svgDimensions(svgPath: string): { w: number; h: number } {
   const content = readFileSync(svgPath, "utf-8");
   const wm = content.match(/width="(\d+)"/);
   const hm = content.match(/height="(\d+)"/);
-  if (wm && hm) return { w: parseInt(wm[1]), h: parseInt(hm[1]) };
-  const vm = content.match(/viewBox="0 0 (\d+) (\d+)"/);
-  if (vm) return { w: parseInt(vm[1]), h: parseInt(vm[2]) };
-  return { w: 1280, h: 720 };
+  let w = parseInt(wm?.[1] ?? "1280");
+  let h = parseInt(hm?.[1] ?? "720");
+  if (w % 2) w++;
+  if (h % 2) h++;
+  return { w, h };
 }
 
 function writeFallbackSvg(path: string, desc: string, w = 1280, h = 720) {
+  if (w % 2) w++;
+  if (h % 2) h++;
   const safe = desc
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
