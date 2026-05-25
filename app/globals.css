@@ -289,6 +289,10 @@ section { position: relative; }
   text-transform: uppercase;
 }
 .live-chip i { width: 6px; height: 6px; border-radius: 50%; background: var(--live); animation: pulse 1.4s ease-in-out infinite; }
+.live-chip .stage-dots { display: inline-flex; align-items: center; gap: 3px; margin-left: 4px; }
+.live-chip .stage-dot { width: 4px; height: 4px; border-radius: 50%; background: oklch(100% 0 0 / 0.2); transition: background 0.3s; }
+.live-chip .stage-dot.is-past { background: var(--live); }
+.live-chip .stage-dot.is-current { background: var(--live); box-shadow: 0 0 4px var(--live); }
 
 /* top toolbar w/ input and transport */
 .studio__bar {

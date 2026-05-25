@@ -507,6 +507,17 @@ export function Studio({ tweaks, mode = "demo" }: { tweaks: Tweaks; mode?: "demo
 
   const phaseLabel = phase === "running" ? "RUNNING" : phase === "idle" ? "READY" : phase.toUpperCase();
 
+  const stageOrder = ["planning", "producing", "mixing", "editing"] as const;
+  const stageNames: Record<string, string> = {
+    planning: "Story",
+    producing: "Shots",
+    mixing: "Mix",
+    editing: "Edit",
+    done: "Done",
+  };
+  const currentStage = stageNames[phase] || "";
+  const stageIdx = stageOrder.indexOf(phase as typeof stageOrder[number]);
+
   return (
     <div className="studio">
       {/* CHROME */}
@@ -534,7 +545,15 @@ export function Studio({ tweaks, mode = "demo" }: { tweaks: Tweaks; mode?: "demo
               <option value="fal/ltx-2">LTX-2</option>
               <option value="runpod/ltx-2" disabled>Runpod</option>
             </select>
-            <span className="live-chip"><i />{phaseLabel}</span>
+            <span className="live-chip"><i />{currentStage || phaseLabel}
+              {stageIdx >= 0 && (
+                <span className="stage-dots">
+                  {stageOrder.map((s, i) => (
+                    <span key={s} className={`stage-dot ${i < stageIdx ? "is-past" : ""} ${i === stageIdx ? "is-current" : ""}`} />
+                  ))}
+                </span>
+              )}
+            </span>
           </div>
         </div>
 
