@@ -251,6 +251,16 @@ export function Studio({ tweaks, mode = "demo" }: { tweaks: Tweaks; mode?: "demo
     }, delay);
   }, []);
 
+  /* unmount safety: clear all timers and abort in-flight requests */
+  useEffect(() => {
+    return () => {
+      timerRef.current.forEach(clearTimeout);
+      timerRef.current = [];
+      if (typeRef.current) clearInterval(typeRef.current);
+      if (abortRef.current) { abortRef.current.abort(); abortRef.current = null; }
+    };
+  }, []);
+
   /* demo phase machine */
   useEffect(() => {
     if (isPreview || !isDemo || phase === "idle") return;

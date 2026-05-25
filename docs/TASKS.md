@@ -53,7 +53,7 @@ On-disk source of truth for the build sequence. Check items off as we go.
 - [x] Editor note text mismatch: says "ProRes 422 HQ + H.264" but output is MP4
 - [x] Playhead static during planning — should show some activity (now shows agent name + "Awaiting shots" in live mode)
 - [ ] Filmstrip empty during planning/mixing/editing — should light up progressively
-- [ ] Unmount safety: timer chain not cleaned up if component unmounts mid-demo
+- [x] Unmount safety: timer chain not cleaned up if component unmounts mid-demo
 
 ## 7. Real LTX-2
 - [x] Wire chosen provider (fal or runpod) end-to-end [needs keys]
