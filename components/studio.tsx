@@ -549,7 +549,7 @@ export function Studio({ tweaks, mode = "demo" }: { tweaks: Tweaks; mode?: "demo
           <div className="value" style={{ color: "var(--text-dim)", marginTop: 4 }}>
             Target runtime · {targetLength}
           </div>
-          <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
+          <div style={{ display: "flex", gap: 8, marginTop: 6, flexWrap: "wrap" }}>
             <select
               className="provider-select"
               value={aspect}
@@ -576,6 +576,8 @@ export function Studio({ tweaks, mode = "demo" }: { tweaks: Tweaks; mode?: "demo
               <option value="720p">720p</option>
               <option value="1080p">1080p</option>
             </select>
+          </div>
+          <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
             <select
               className="provider-select"
               value={targetLength}
