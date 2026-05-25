@@ -52,9 +52,15 @@ export function assembleFilm(manifest: FilmManifest): string {
     const segPath = join(tmpDir, `seg-${i}.mp4`);
 
     if (render?.url && !render.url.startsWith("data:")) {
-      /* Video render — download and use directly. */
-      const videoPath = join(tmpDir, `video-${i}.mp4`);
-      download(render.url, videoPath);
+      let videoPath: string;
+      if (render.url.startsWith("/renders/")) {
+        /* Already downloaded by orchestrator — use local file directly. */
+        videoPath = join(process.cwd(), "public", render.url);
+      } else {
+        /* Remote URL — download to tmp dir. */
+        videoPath = join(tmpDir, `video-${i}.mp4`);
+        download(render.url, videoPath);
+      }
       if (existsSync(videoPath)) {
         execSync(
           `ffmpeg -y -i "${videoPath}" -c copy -an -t ${Math.max(2, shot.durationSec)} "${segPath}" 2>/dev/null`,

@@ -3,6 +3,15 @@ import type { VideoProvider } from "@/lib/providers/video";
 import { createProvider } from "@/lib/providers/video";
 import { createFilmGraph } from "./graph";
 import { assembleFilm } from "@/lib/ffmpeg/assemble";
+import { mkdirSync } from "node:fs";
+import { join } from "node:path";
+import { execSync } from "node:child_process";
+
+const RENDERS_DIR = join(process.cwd(), "public", "renders");
+
+function download(url: string, dest: string) {
+  execSync(`curl -sL -o "${dest}" "${url}"`, { timeout: 120_000 });
+}
 
 const pollMs = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -25,7 +34,20 @@ export async function* runPipeline(
   const channel: PipelineEvent[] = [];
   let filmManifest: Extract<PipelineEvent, { type: "film" }>["manifest"] | null = null;
 
+  const slug =
+    idea.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40) || "film";
+  const runId = `${slug}-${Date.now()}`;
+  const runDir = join(RENDERS_DIR, runId);
+
   const emit = (e: PipelineEvent) => {
+    if (e.type === "shot" && e.status === "ready" && e.render) {
+      if (e.render.kind === "video" && !e.render.url.startsWith("data:")) {
+        const dest = join(runDir, `shot-${e.render.shotId}.mp4`);
+        mkdirSync(runDir, { recursive: true });
+        download(e.render.url, dest);
+        e.render.url = `/renders/${runId}/shot-${e.render.shotId}.mp4`;
+      }
+    }
     if (e.type === "film") filmManifest = e.manifest;
     channel.push(e);
   };
