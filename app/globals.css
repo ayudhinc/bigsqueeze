@@ -370,6 +370,8 @@ section { position: relative; }
 }
 .logline-input button:hover { filter: brightness(1.1); }
 .logline-input button[disabled] { opacity: 0.5; cursor: default; }
+.logline-input .stop-btn { background: transparent; border: 1px solid var(--c-music); color: var(--c-music); margin-left: 4px; }
+.logline-input .stop-btn:hover { background: var(--c-music); color: oklch(15% 0 0); }
 
 .suggest {
   display: flex; gap: 6px;

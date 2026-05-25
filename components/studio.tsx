@@ -222,6 +222,15 @@ export function Studio({ tweaks, mode = "demo" }: { tweaks: Tweaks; mode?: "demo
     setLiveShots([]);
   }
 
+  function stopPipeline() {
+    if (abortRef.current) {
+      abortRef.current.abort();
+      abortRef.current = null;
+    }
+    clearAll();
+    setPhase("idle");
+  }
+
   /* ── DEMO: scripted simulation ─────────────────────────────────────── */
   const startDemo = useCallback(() => {
     clearAll();
@@ -607,6 +616,11 @@ export function Studio({ tweaks, mode = "demo" }: { tweaks: Tweaks; mode?: "demo
             <button type="submit" disabled={isPreview || !logline.trim() || (phase !== "idle" && phase !== "done")}>
               {phase === "idle" || phase === "done" ? "GENERATE" : "RUNNING\u2026"}
             </button>
+            {(phase === "running" || phase === "producing" || phase === "mixing" || phase === "editing") && (
+              <button type="button" className="stop-btn" onClick={stopPipeline} title="Stop generation">
+                {'\u25A0'} STOP
+              </button>
+            )}
           </form>
           <div className="suggest">
             {presets.map((p, i) => (
