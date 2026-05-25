@@ -690,6 +690,13 @@ export function Studio({ tweaks, mode = "demo" }: { tweaks: Tweaks; mode?: "demo
             {(renderPct > 0 && renderPct < 100) && <div className="preview__sweep" style={{ clipPath: `inset(0 ${100 - renderPct}% 0 0)` }} />}
             {isDemo && demoCurrentShot && <DemoShotFrame shot={demoCurrentShot} scrub={renderPct / 100} />}
             {!isDemo && liveCurrentShot?.render && <LiveShotFrame url={liveCurrentShot.render.url} alt={liveCurrentShot.spec.description} kind={liveCurrentShot.render.kind} />}
+            {(phase === "running" || phase === "planning" || phase === "producing" || phase === "mixing" || phase === "editing") && !liveCurrentShot?.render && !demoCurrentShot && (
+              <div className="preview__throbber">
+                <div className="throbber__ring" />
+                <div className="throbber__ring" />
+                <div className="throbber__ring" />
+              </div>
+            )}
             {!demoCurrentShot && !liveCurrentShot && (
               <div className="preview__placeholder">
                 {pipelineError ? `Error: ${pipelineError}` : phase === "running" ? "— Pipeline running · waiting for first shot —" : "— No signal · paste a logline to begin —"}

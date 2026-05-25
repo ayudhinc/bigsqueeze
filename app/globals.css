@@ -529,6 +529,24 @@ section { position: relative; }
   letter-spacing: 0.12em;
   text-transform: uppercase;
 }
+.preview__throbber {
+  position: absolute; inset: 0; z-index: 6;
+  display: grid; place-items: center;
+  pointer-events: none;
+}
+.throbber__ring {
+  position: absolute;
+  width: 80px; height: 80px;
+  border: 2px solid color-mix(in oklch, var(--accent) 40%, transparent);
+  border-radius: 50%;
+  animation: throb 2s ease-out infinite;
+}
+.throbber__ring:nth-child(2) { animation-delay: 0.66s; }
+.throbber__ring:nth-child(3) { animation-delay: 1.32s; }
+@keyframes throb {
+  0%   { transform: scale(0.3); opacity: 1; }
+  100% { transform: scale(2.5); opacity: 0; }
+}
 .preview__frame {
   position: absolute; inset: 0;
   background-size: cover;
