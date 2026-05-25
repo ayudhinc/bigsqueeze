@@ -373,8 +373,7 @@ export function Studio({ tweaks, mode = "demo" }: { tweaks: Tweaks; mode?: "demo
       setActiveAgents({});
       setDoneAgents({});
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [logline]);
+  }, [logline, provider, aspect, resolution, targetLength]);
 
   /* pipeline event → Studio state */
   function handleEvent(event: PipelineEvent) {
