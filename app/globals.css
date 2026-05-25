@@ -512,6 +512,12 @@ section { position: relative; }
   background: #000;
   overflow: hidden;
 }
+.preview__sweep {
+  position: absolute; inset: 0; z-index: 5;
+  background: linear-gradient(90deg, oklch(0% 0 0 / 0.75) 0%, oklch(0% 0 0 / 0.4) 60%, transparent 100%);
+  transition: clip-path 0.3s linear;
+  pointer-events: none;
+}
 .preview__placeholder {
   position: absolute; inset: 0;
   display: grid; place-items: center;

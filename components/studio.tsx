@@ -132,16 +132,13 @@ const AGENT_MAP: Record<string, string> = {
 
 /* ── Shared sub-components ─────────────────────────────────────────────── */
 
-function DemoShotFrame({ shot, scrub = 0 }: { shot: DemoShot | null; scrub?: number }) {
+function DemoShotFrame({ shot, scrub: _scrub = 0 }: { shot: DemoShot | null; scrub?: number }) {
   if (!shot) return null;
   return (
     <div
       className="preview__frame"
       style={{
         background: shot.bg,
-        transform: `scale(${1 + scrub * 0.04})`,
-        transformOrigin: "55% 50%",
-        transition: "transform 0.8s ease",
       }}
     >
       {shot.elements}
@@ -677,6 +674,7 @@ export function Studio({ tweaks, mode = "demo" }: { tweaks: Tweaks; mode?: "demo
             </span>
           </div>
           <div className="preview__viewport cinebars">
+            {(renderPct > 0 && renderPct < 100) && <div className="preview__sweep" style={{ clipPath: `inset(0 ${100 - renderPct}% 0 0)` }} />}
             {isDemo && demoCurrentShot && <DemoShotFrame shot={demoCurrentShot} scrub={renderPct / 100} />}
             {!isDemo && liveCurrentShot?.render && <LiveShotFrame url={liveCurrentShot.render.url} alt={liveCurrentShot.spec.description} kind={liveCurrentShot.render.kind} />}
             {!demoCurrentShot && !liveCurrentShot && (

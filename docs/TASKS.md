@@ -48,7 +48,7 @@ On-disk source of truth for the build sequence. Check items off as we go.
 
 ## 6.1 Demo UI quality fixes
 - [x] Timing: shots render too fast (1.9s each, 7 steps at 180ms) — slow down to feel like real generation
-- [ ] Render progress: `scale(1 + scrub*0.04)` at 4% max zoom is imperceptible — use visible progress bar or overlay
+- [x] Render progress: sweep overlay replaces imperceptible 4% zoom; visible progress bar in overlay
 - [x] Phase indicator: show current stage (planning → producing → mixing → editing) in the UI
 - [x] Editor note text mismatch: says "ProRes 422 HQ + H.264" but output is MP4
 - [x] Playhead static during planning — should show some activity (now shows agent name + "Awaiting shots" in live mode)
