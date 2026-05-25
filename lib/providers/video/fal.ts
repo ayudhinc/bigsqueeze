@@ -5,6 +5,7 @@ import type { ShotRender } from "@/lib/pipeline/types";
 export class FalVideoProvider implements VideoProvider {
   readonly name: string;
   private readonly model: string;
+  private readonly i2vModel: string;
   private readonly isSeedance: boolean;
   private readonly isLtx: boolean;
 
@@ -17,6 +18,7 @@ export class FalVideoProvider implements VideoProvider {
       throw new Error("[video] FAL_KEY is not set");
     }
     this.model = model ?? process.env.FAL_VIDEO_MODEL ?? "fal-ai/ltx-2/text-to-video/fast";
+    this.i2vModel = this.model.replace("/text-to-video", "/image-to-video");
     this.isSeedance = this.model.includes("seedance");
     this.isLtx = this.model.includes("ltx");
     this.name = this.isSeedance ? "seedance" : "fal";
@@ -25,19 +27,20 @@ export class FalVideoProvider implements VideoProvider {
   async generateShot(input: GenerateShotInput): Promise<ShotRender> {
     const { shot } = input;
     const dur = Math.max(2, Math.round(shot.durationSec));
+    const hasRef = !!input.referenceImageUrl;
 
     if (this.isLtx) {
-      return this.generateLtx(input, dur);
+      return this.generateLtx(input, dur, hasRef);
     }
     if (this.isSeedance) {
-      return this.generateSeedance(input, dur);
+      return this.generateSeedance(input, dur, hasRef);
     }
     /* Fallback — generic passthrough (may fail if model rejects params). */
     return this.generateGeneric(input, dur);
   }
 
   /* ── LTX-2 (both Pro and Fast) ───────────────────────────────────── */
-  private async generateLtx(input: GenerateShotInput, dur: number): Promise<ShotRender> {
+  private async generateLtx(input: GenerateShotInput, dur: number, hasRef: boolean): Promise<ShotRender> {
     const validDurations = this.model.includes("/fast") ? [6, 8, 10, 12, 14, 16, 18, 20] : [6, 8, 10];
     const d = validDurations.find((v) => v >= dur) ?? validDurations[validDurations.length - 1];
     const res = mapResolution(input.resolution ?? "720p", ["1080p", "1440p", "2160p"]);
@@ -48,12 +51,15 @@ export class FalVideoProvider implements VideoProvider {
       resolution: res,
       generate_audio: true,
     };
+    if (hasRef && input.referenceImageUrl) {
+      (modelInput as Record<string, unknown>).image_url = input.referenceImageUrl;
+    }
 
-    return this.run(modelInput, input.shot.id, dur);
+    return this.run(modelInput, input.shot.id, dur, hasRef ? this.i2vModel : undefined);
   }
 
   /* ── Seedance 2.0 ─────────────────────────────────────────────────── */
-  private async generateSeedance(input: GenerateShotInput, dur: number): Promise<ShotRender> {
+  private async generateSeedance(input: GenerateShotInput, dur: number, hasRef: boolean): Promise<ShotRender> {
     const validDurations = [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
     const d = validDurations.find((v) => v >= dur) ?? validDurations[validDurations.length - 1];
     const res = mapResolution(input.resolution ?? "720p", ["480p", "720p"]);
@@ -65,8 +71,11 @@ export class FalVideoProvider implements VideoProvider {
       aspect_ratio: input.aspect ?? "16:9",
       generate_audio: true,
     };
+    if (hasRef && input.referenceImageUrl) {
+      (modelInput as Record<string, unknown>).image_url = input.referenceImageUrl;
+    }
 
-    return this.run(modelInput, input.shot.id, dur);
+    return this.run(modelInput, input.shot.id, dur, hasRef ? this.i2vModel : undefined);
   }
 
   /* ── Generic fallback ─────────────────────────────────────────────── */
@@ -78,8 +87,9 @@ export class FalVideoProvider implements VideoProvider {
   }
 
   /* ── Shared: call fal.subscribe and map result ────────────────────── */
-  private async run(modelInput: Record<string, unknown>, shotId: string, durationSec: number): Promise<ShotRender> {
-    const result = await fal.subscribe(this.model, { input: modelInput });
+  private async run(modelInput: Record<string, unknown>, shotId: string, durationSec: number, model?: string): Promise<ShotRender> {
+    const m = model ?? this.model;
+    const result = await fal.subscribe(m, { input: modelInput });
     const data =
       (result as { data?: Record<string, unknown> }).data ??
       (result as Record<string, unknown>);
@@ -93,7 +103,7 @@ export class FalVideoProvider implements VideoProvider {
       kind: "video",
       durationSec,
       provider: this.name,
-      meta: { model: this.model },
+      meta: { model: m },
     };
   }
 }

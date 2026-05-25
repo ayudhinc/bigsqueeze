@@ -8,6 +8,9 @@ import { composeScore } from "@/lib/agents/composer";
 import { gradeShot } from "@/lib/agents/colorist";
 import { editFilm } from "@/lib/agents/critic";
 import { getVideoProvider, type VideoProvider } from "@/lib/providers/video";
+import { execSync } from "node:child_process";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 
 /* ──────────────────────────────────────────────────────────────────────────
    Per-shot result bag accumulated across cinematographer → renderer → post.
@@ -65,6 +68,8 @@ const FilmState = Annotation.Root({
   }),
 
   manifest: Annotation<FilmManifest | null>({ reducer: (a, b) => b ?? a }),
+
+  referenceFrameUrl: Annotation<string | null>({ reducer: (a, b) => b ?? a }),
 });
 
 type St = typeof FilmState.State;
@@ -132,12 +137,20 @@ export function createFilmGraph(emit: (e: PipelineEvent) => void, provider?: Vid
     const shot = currentShot(st);
     emit({ type: "shot", shotId: shot.id, status: "rendering" });
     try {
-      const render = await _provider.generateShot({ prompt: st.prompt ?? "", shot, aspect: st.aspect, resolution: st.resolution });
+      const render = await _provider.generateShot({
+        prompt: st.prompt ?? "",
+        shot,
+        aspect: st.aspect,
+        resolution: st.resolution,
+        referenceImageUrl: st.referenceFrameUrl ?? undefined,
+      });
       emit({ type: "shot", shotId: shot.id, status: "ready", render });
+      const referenceFrameUrl = extractFrame(render.url);
       return {
         shotResults: {
           [shot.id]: { ...st.shotResults[shot.id], render } as ShotResult,
         },
+        referenceFrameUrl,
       };
     } catch (err) {
       const msg = `Shot ${shot.index + 1} render failed: ${(err as Error).message}`;
@@ -285,4 +298,26 @@ export function createFilmGraph(emit: (e: PipelineEvent) => void, provider?: Vid
     .addEdge("editor", END);
 
   return builder.compile();
+}
+
+/**
+ * Extract a single frame from a video file and return it as a base64
+ * data URI (JPEG). Works with local /renders/ paths (from orchestrator
+ * download) or remote URLs. Returns null for SVGs or on failure.
+ */
+function extractFrame(videoUrl: string): string | null {
+  if (!videoUrl || videoUrl.startsWith("data:")) return null;
+  try {
+    const src = videoUrl.startsWith("/renders/")
+      ? join(process.cwd(), "public", videoUrl)
+      : videoUrl;
+    if (!existsSync(src)) return null;
+    const buf = execSync(
+      `ffmpeg -y -i "${src}" -vframes 1 -f image2pipe -vcodec mjpeg - 2>/dev/null`,
+      { timeout: 30_000, encoding: "buffer" },
+    );
+    return `data:image/jpeg;base64,${buf.toString("base64")}`;
+  } catch {
+    return null;
+  }
 }

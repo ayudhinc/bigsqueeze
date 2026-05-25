@@ -22,9 +22,13 @@ export class SimulatedVideoProvider implements VideoProvider {
     const caption = wrap(escapeXml(shot.description || prompt), Math.round(w / 30))
       .map(
         (ln, i) =>
-          `<text x="${w * 0.05}" y="${svgH * 0.5 + i * (svgH * 0.05)}" font-family="ui-sans-serif, system-ui" font-size="${svgH * 0.036}" fill="rgba(255,255,255,0.92)">${ln}</text>`,
+          `<text x="${w * 0.05}" y="${svgH * 0.5 + i * (svgH * 0.05)}" font-family="ui-sans-serif, system-ui" font-size="${svgH * 0.036}" fill=" rgba(255,255,255,0.92)">${ln}</text>`,
       )
       .join("");
+
+    const refImage = input.referenceImageUrl
+      ? `<image href="${input.referenceImageUrl}" x="${w * 0.02}" y="${svgH * 0.02}" width="${w * 0.18}" height="${svgH * 0.18}" preserveAspectRatio="xMidYMid slice" style="border-radius:4px;opacity:0.6;image-rendering:auto" />`
+      : "";
 
     const cx = w * 0.77, cy = svgH * 0.28, r = svgH * 0.17;
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${svgH}" viewBox="0 0 ${w} ${svgH}">
@@ -37,6 +41,7 @@ export class SimulatedVideoProvider implements VideoProvider {
     </linearGradient>
   </defs>
   <rect width="${w}" height="${svgH}" fill="url(#g)"/>
+  ${refImage}
   <circle cx="${cx}" cy="${cy}" r="${r}" fill="hsl(${hue2} 80% 60% / 0.22)">
     <animate attributeName="cy" values="${cy};${cy + svgH * 0.07};${cy}" dur="${durStr}" repeatCount="indefinite"/>
   </circle>
