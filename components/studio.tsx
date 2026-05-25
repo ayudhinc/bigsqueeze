@@ -30,13 +30,13 @@ type LiveShot = {
   render?: ShotRender;
 };
 
-type NoteState = {
-  from: { id: string; name: string; role: string; color: string };
-  body: string;
-  target?: string;
+type LogEntry = {
+  id: number;
   time: string;
-  typing: boolean;
-} | null;
+  agent: { id: string; name: string; role: string; init: string; color: string };
+  message: string;
+  kind: "agent_start" | "agent_done" | "note" | "error" | "system";
+};
 
 const DEMO_SHOTS: DemoShot[] = [
   {
@@ -174,7 +174,7 @@ export function Studio({ tweaks, mode = "demo" }: { tweaks: Tweaks; mode?: "demo
   const [playhead, setPlayhead] = useState(0);
   const [activeAgents, setActiveAgents] = useState<Record<string, boolean>>({});
   const [doneAgents, setDoneAgents] = useState<Record<string, boolean>>({});
-  const [note, setNote] = useState<NoteState>(null);
+  const [log, setLog] = useState<LogEntry[]>([]);
   const [tc, setTc] = useState("00:00:00:00");
 
   /* live-mode state */
@@ -190,8 +190,9 @@ export function Studio({ tweaks, mode = "demo" }: { tweaks: Tweaks; mode?: "demo
   const [presets] = useState(() => getPresets());
 
   const timerRef = useRef<ReturnType<typeof setTimeout>[]>([]);
-  const typeRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const logIdRef = useRef(0);
+  const logRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setLogline((l) => l || presets[0]);
@@ -207,7 +208,6 @@ export function Studio({ tweaks, mode = "demo" }: { tweaks: Tweaks; mode?: "demo
   function clearAll() {
     timerRef.current.forEach(clearTimeout);
     timerRef.current = [];
-    if (typeRef.current) clearInterval(typeRef.current);
     if (abortRef.current) { abortRef.current.abort(); abortRef.current = null; }
     setActiveShotIdx(0);
     setCompletedShots([]);
@@ -215,8 +215,8 @@ export function Studio({ tweaks, mode = "demo" }: { tweaks: Tweaks; mode?: "demo
     setPlayhead(0);
     setActiveAgents({});
     setDoneAgents({});
-    setNote(null);
     setPipelineError(null);
+    setLog([]);
     setFilmUrl(null);
     setLiveShots([]);
   }
@@ -232,31 +232,23 @@ export function Studio({ tweaks, mode = "demo" }: { tweaks: Tweaks; mode?: "demo
     setPhase("idle");
   }, []);
 
-  const streamNote = useCallback((fromId: string, body: string, delay = 0) => {
-    if (typeRef.current) clearInterval(typeRef.current);
-    schedule(() => {
-      const agent = AGENTS.find((a) => a.id === fromId) ?? AGENTS[0];
-      const tStamp = new Date().toLocaleTimeString("en-GB", { hour12: false });
-      setNote({ from: agent, body: "", target: body, time: tStamp, typing: true });
-      let i = 0;
-      typeRef.current = setInterval(() => {
-        i += Math.max(1, Math.floor(body.length / 60));
-        if (i >= body.length) {
-          setNote((n) => (n ? { ...n, body, typing: false } : null));
-          if (typeRef.current) clearInterval(typeRef.current);
-        } else {
-          setNote((n) => (n ? { ...n, body: body.slice(0, i) } : null));
-        }
-      }, 22);
-    }, delay);
+  const addLog = useCallback((agentId: string, message: string, kind: LogEntry["kind"] = "note") => {
+    const agent = AGENTS.find((a) => a.id === agentId) ?? AGENTS[0];
+    const time = new Date().toLocaleTimeString("en-GB", { hour12: false });
+    const id = ++logIdRef.current;
+    setLog((prev) => [...prev, { id, time, agent, message, kind }]);
   }, []);
+
+  /* auto-scroll log to bottom */
+  useEffect(() => {
+    logRef.current?.scrollTo({ top: logRef.current.scrollHeight, behavior: "smooth" });
+  }, [log]);
 
   /* unmount safety: clear all timers and abort in-flight requests */
   useEffect(() => {
     return () => {
       timerRef.current.forEach(clearTimeout);
       timerRef.current = [];
-      if (typeRef.current) clearInterval(typeRef.current);
       if (abortRef.current) { abortRef.current.abort(); abortRef.current = null; }
     };
   }, []);
@@ -267,8 +259,8 @@ export function Studio({ tweaks, mode = "demo" }: { tweaks: Tweaks; mode?: "demo
 
     if (phase === "planning") {
       setActiveAgents({ writer: true, director: true });
-      streamNote("writer", "Beat sheet drafted. 3-act structure. 6 scenes, 27 shots. Establishing character through silence in cold open.", 0);
-      schedule(() => streamNote("director", "Cold open: wide on alley. Push to close on hands. Cut on movement, not action. Lens choice: 35mm anamorphic.", 2200), 0);
+      addLog("writer", "Beat sheet drafted. 3-act structure. 6 scenes, 27 shots. Establishing character through silence in cold open.");
+      schedule(() => addLog("director", "Cold open: wide on alley. Push to close on hands. Cut on movement, not action. Lens choice: 35mm anamorphic."), 2200);
       schedule(() => {
         setDoneAgents((d) => ({ ...d, writer: true }));
         setActiveAgents((a) => ({ ...a, writer: false }));
@@ -278,13 +270,14 @@ export function Studio({ tweaks, mode = "demo" }: { tweaks: Tweaks; mode?: "demo
 
     if (phase === "producing") {
       setActiveAgents((a) => ({ ...a, director: true, dp: true }));
+      addLog("director", "Starting shot production — 9 shots planned.");
       const shotMs = 2800;
       DEMO_SHOTS.forEach((shot, i) => {
         const base = i * shotMs;
         schedule(() => {
           setActiveShotIdx(i);
           setRenderPct(0);
-          streamNote("dp", `Rendering ${shot.code} — ${shot.name}. ${shot.desc}`, 0);
+          addLog("dp", `Rendering ${shot.code} — ${shot.name}. ${shot.desc}`);
         }, base);
         [10, 20, 35, 50, 65, 80, 100].forEach((p, k) => {
           schedule(() => setRenderPct(p), base + 300 + k * 320);
@@ -304,8 +297,8 @@ export function Studio({ tweaks, mode = "demo" }: { tweaks: Tweaks; mode?: "demo
 
     if (phase === "mixing") {
       setActiveAgents((a) => ({ ...a, sound: true, score: true, color: true }));
-      streamNote("sound", "Foley pass 1: footsteps, fabric, rain. Atmos: 6.2 stems. ADR matched to lip movement on shots 02A, 04A.", 0);
-      schedule(() => streamNote("score", "Theme A in C minor. Solo cello for cold open, full strings on rooftop. 84 bpm.", 2200), 0);
+      addLog("sound", "Foley pass 1: footsteps, fabric, rain. Atmos: 6.2 stems. ADR matched to lip movement on shots 02A, 04A.");
+      schedule(() => addLog("score", "Theme A in C minor. Solo cello for cold open, full strings on rooftop. 84 bpm."), 2200);
       schedule(() => setPlayhead(80), 1000);
       schedule(() => {
         setDoneAgents((d) => ({ ...d, sound: true, score: true, color: true }));
@@ -316,7 +309,7 @@ export function Studio({ tweaks, mode = "demo" }: { tweaks: Tweaks; mode?: "demo
 
     if (phase === "editing") {
       setActiveAgents((a) => ({ ...a, editor: true }));
-      streamNote("editor", "Locking cut. Color grade: cool shadows, warm midtones, lifted blacks. Delivered MP4 + H.264.", 0);
+      addLog("editor", "Locking cut. Color grade: cool shadows, warm midtones, lifted blacks. Delivered MP4 + H.264.");
       schedule(() => setPlayhead(100), 1200);
       schedule(() => {
         setDoneAgents((d) => ({ ...d, editor: true }));
@@ -324,7 +317,7 @@ export function Studio({ tweaks, mode = "demo" }: { tweaks: Tweaks; mode?: "demo
         setPhase("done");
       }, 4000);
     }
-  }, [phase, isDemo, streamNote, isPreview]);
+  }, [phase, isDemo, addLog, isPreview]);
 
   /* ── LIVE: real pipeline via SSE ────────────────────────────────────── */
   const startLive = useCallback(async () => {
@@ -390,20 +383,20 @@ export function Studio({ tweaks, mode = "demo" }: { tweaks: Tweaks; mode?: "demo
         if (!agentId) break;
         if (event.status === "start") {
           setActiveAgents((a) => ({ ...a, [agentId]: true }));
-          if (event.message) streamNoteFromAgent(agentId, event.message);
+          if (event.message) addLog(agentId, event.message, "agent_start");
         } else {
           setDoneAgents((d) => ({ ...d, [agentId]: true }));
           setActiveAgents((a) => ({ ...a, [agentId]: false }));
-          if (event.message) streamNoteFromAgent(agentId, event.message);
+          if (event.message) addLog(agentId, event.message, "agent_done");
         }
         break;
       }
       case "treatment":
-        streamNoteFromAgent("writer", `Treatment drafted: ${event.treatment.synopsis.slice(0, 120)}`);
+        addLog("writer", `Treatment drafted: ${event.treatment.synopsis.slice(0, 120)}`);
         break;
       case "shots":
         setLiveShots(event.shots.map((s: ShotSpec) => ({ spec: s, status: "queued" as const })));
-        streamNoteFromAgent("director", `${event.shots.length} shots planned for this treatment.`);
+        addLog("director", `${event.shots.length} shots planned for this treatment.`);
         break;
       case "shot": {
         setLiveShots((prev) =>
@@ -426,31 +419,14 @@ export function Studio({ tweaks, mode = "demo" }: { tweaks: Tweaks; mode?: "demo
       case "film":
         setPhase("done");
         setFilmUrl(event.url ?? null);
-        streamNoteFromAgent("editor", "All shots complete. Master assembled.");
+        addLog("editor", "All shots complete. Master assembled.");
         setPlayhead(100);
         break;
       case "error":
-        streamNoteFromAgent("editor", `Error: ${event.message}`);
+        addLog("editor", `Error: ${event.message}`);
         setPipelineError(event.message);
         break;
     }
-  }
-
-  function streamNoteFromAgent(agentId: string, body: string) {
-    if (typeRef.current) clearInterval(typeRef.current);
-    const agent = AGENTS.find((a) => a.id === agentId) ?? AGENTS[0];
-    const tStamp = new Date().toLocaleTimeString("en-GB", { hour12: false });
-    setNote({ from: agent, body: "", target: body, time: tStamp, typing: true });
-    let i = 0;
-    typeRef.current = setInterval(() => {
-      i += Math.max(1, Math.floor(body.length / 60));
-      if (i >= body.length) {
-        setNote((n) => (n ? { ...n, body, typing: false } : null));
-        if (typeRef.current) clearInterval(typeRef.current);
-      } else {
-        setNote((n) => (n ? { ...n, body: body.slice(0, i) } : null));
-      }
-    }, 22);
   }
 
   const handleSubmit = useCallback((e: React.FormEvent) => {
@@ -487,7 +463,7 @@ export function Studio({ tweaks, mode = "demo" }: { tweaks: Tweaks; mode?: "demo
         bg: s.bg,
         done: completedShots.includes(s.id),
         isCurrent: phase === "producing" && i === activeShotIdx,
-        isEmpty: !completedShots.includes(s.id) && !(phase === "producing" && i === activeShotIdx),
+        isEmpty: false,
       }));
     }
     return liveShots.map((ls, i) => ({
@@ -718,7 +694,7 @@ export function Studio({ tweaks, mode = "demo" }: { tweaks: Tweaks; mode?: "demo
             {stripCells.map((c) => (
               <div
                 key={c.id}
-                className={`cell ${c.isCurrent ? "is-current" : ""} ${c.isEmpty ? "empty" : ""}`}
+                className={`cell ${c.isCurrent ? "is-current" : ""} ${c.isEmpty ? "empty" : ""} ${c.done ? "is-done" : !c.isCurrent && !c.isEmpty ? "is-pending" : ""}`}
                 style={c.bg && (c.done || c.isCurrent) ? { background: c.bg } : {}}
               >
                 <span className="num">{c.code}</span>
@@ -735,23 +711,21 @@ export function Studio({ tweaks, mode = "demo" }: { tweaks: Tweaks; mode?: "demo
             <span className="label">Live</span>
           </div>
           <div className="panel__body">
-            <div className="notes">
-              {!note && (
+            <div className="notes" ref={logRef}>
+              {log.length === 0 ? (
                 <div style={{ color: "var(--text-dim)", fontSize: 12, fontFamily: "var(--font-mono)", lineHeight: 1.5 }}>
                   Notes from the agent swarm will stream in here as the film is produced.
                 </div>
-              )}
-              {note && (
-                <div className="note" style={{ "--c": note.from.color } as CSSProperties}>
-                  <div className="from">
-                    {note.from.role.toUpperCase()} · {note.from.name}
-                    <time>{note.time}</time>
+              ) : (
+                log.map((entry) => (
+                  <div key={entry.id} className={`note note--${entry.kind}`} style={{ "--c": entry.agent.color } as CSSProperties}>
+                    <div className="from">
+                      {entry.agent.role.toUpperCase()} · {entry.agent.name}
+                      <time>{entry.time}</time>
+                    </div>
+                    <div className="body">{entry.message}</div>
                   </div>
-                  <div className="body">
-                    {note.body}
-                    {note.typing && <span className="cursor" />}
-                  </div>
-                </div>
+                ))
               )}
               {phase === "done" && (
                 <div style={{ marginTop: 8 }}>

@@ -166,16 +166,24 @@ export async function genObject<T>(
   const modelName = agent && !ALL_SAME ? AGENT_MODEL[agent] : DEFAULT_MODEL;
 
   if (supportsJsonSchema(modelName)) {
-    const { object } = await withRetry(() =>
-      generateObject({
-        model: resolveModel(agent),
-        schema,
-        prompt,
-        system,
-        maxRetries: 0,
-      }),
-    );
-    return object as T;
+    try {
+      const { object } = await withRetry(() =>
+        generateObject({
+          model: resolveModel(agent),
+          schema,
+          prompt,
+          system,
+          maxRetries: 0,
+        }),
+      );
+      return object as T;
+    } catch (err) {
+      const msg = (err as Error).message;
+      if (!msg.includes("jsonschema") && !msg.includes("does not match the expected schema")) {
+        throw err;
+      }
+      /* jsonschema failed — fall through to text-gen path */
+    }
   }
 
   /* Fallback: text-gen → JSON parse → Zod validate (with retries). */

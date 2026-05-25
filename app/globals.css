@@ -603,6 +603,9 @@ section { position: relative; }
   content: ""; position: absolute; inset: 0;
   border: 2px solid var(--c-shot);
 }
+.preview__strip .cell.is-pending { opacity: 0.4; }
+.preview__strip .cell.is-pending .num { background: oklch(100% 0 0 / 0.1); color: oklch(100% 0 0 / 0.4); }
+.preview__strip .cell.is-done { opacity: 1; }
 .preview__strip .cell .num {
   position: absolute; top: 3px; left: 4px;
   font-family: var(--font-mono);
@@ -618,11 +621,17 @@ section { position: relative; }
 }
 
 /* notes panel */
-.notes { display: flex; flex-direction: column; gap: 12px; }
+.notes {
+  display: flex; flex-direction: column; gap: 8px;
+  overflow-y: auto; max-height: 320px; scrollbar-width: thin;
+}
 .note {
   border-left: 2px solid var(--c, var(--c-shot));
   padding: 2px 0 2px 10px;
+  opacity: 1;
 }
+.note--agent_start { opacity: 0.6; }
+.note--agent_start .body { font-size: 11px; }
 .note .from {
   font-family: var(--font-mono);
   font-size: 10px;
