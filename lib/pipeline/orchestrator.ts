@@ -29,6 +29,7 @@ export async function* runPipeline(
   idea: string,
   providerKind = "simulated",
   aspect = "16:9",
+  resolution = "720p",
   targetLength = "5s",
 ): AsyncGenerator<PipelineEvent> {
   const channel: PipelineEvent[] = [];
@@ -60,7 +61,7 @@ export async function* runPipeline(
 
   /* Run the graph in a background promise while we yield events as they arrive. */
   void graph
-    .invoke({ idea, aspect, targetLength })
+    .invoke({ idea, aspect, resolution, targetLength })
     .then(() => { graphDone = true; })
     .catch((err: unknown) => {
       graphError = err instanceof Error ? err.message : String(err);

@@ -1,5 +1,5 @@
 import { execSync } from "node:child_process";
-import { writeFileSync, mkdirSync, rmSync, existsSync } from "node:fs";
+import { writeFileSync, mkdirSync, rmSync, existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { FilmManifest } from "@/lib/pipeline/types";
 
@@ -11,7 +11,17 @@ function dataUrlToSvg(dataUrl: string): string {
   return decodeURIComponent(encoded);
 }
 
-function writeFallbackSvg(path: string, desc: string) {
+function svgDimensions(svgPath: string): { w: number; h: number } {
+  const content = readFileSync(svgPath, "utf-8");
+  const wm = content.match(/width="(\d+)"/);
+  const hm = content.match(/height="(\d+)"/);
+  if (wm && hm) return { w: parseInt(wm[1]), h: parseInt(hm[1]) };
+  const vm = content.match(/viewBox="0 0 (\d+) (\d+)"/);
+  if (vm) return { w: parseInt(vm[1]), h: parseInt(vm[2]) };
+  return { w: 1280, h: 720 };
+}
+
+function writeFallbackSvg(path: string, desc: string, w = 1280, h = 720) {
   const safe = desc
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
@@ -19,9 +29,9 @@ function writeFallbackSvg(path: string, desc: string) {
     .replace(/"/g, "&quot;");
   writeFileSync(
     path,
-    `<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720">
-  <rect width="1280" height="720" fill="#1a1a2e"/>
-  <text x="640" y="360" text-anchor="middle" fill="#888" font-family="system-ui" font-size="28">${safe}</text>
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}">
+  <rect width="${w}" height="${h}" fill="#1a1a2e"/>
+  <text x="${w / 2}" y="${h / 2}" text-anchor="middle" fill="#888" font-family="system-ui" font-size="28">${safe}</text>
 </svg>`,
   );
 }
@@ -80,7 +90,8 @@ export function assembleFilm(manifest: FilmManifest): string {
       writeFallbackSvg(svgPath, shot.description);
     }
 
-    execSync(`rsvg-convert -w 1280 -h 720 "${svgPath}" > "${pngPath}"`);
+    const { w, h } = svgDimensions(svgPath);
+    execSync(`rsvg-convert -w ${w} -h ${h} "${svgPath}" > "${pngPath}"`);
     execSync(
       `ffmpeg -y -loop 1 -i "${pngPath}" -c:v libx264 -t ${Math.max(2, shot.durationSec)} -pix_fmt yuv420p -r 24 -preset ultrafast "${segPath}" 2>/dev/null`,
     );

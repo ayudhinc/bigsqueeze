@@ -6,6 +6,8 @@ export type GenerateShotInput = {
   shot: ShotSpec;
   /** Aspect ratio string, e.g. "16:9", "9:16". */
   aspect?: string;
+  /** Resolution label, e.g. "720p", "1080p". */
+  resolution?: string;
   /** Optional reference image (data URI or URL) for character/style consistency. */
   referenceImageUrl?: string;
 };

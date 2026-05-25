@@ -29,6 +29,8 @@ const FilmState = Annotation.Root({
 
   aspect: Annotation<string>,
 
+  resolution: Annotation<string>,
+
   targetLength: Annotation<string>,
 
   treatment: Annotation<Treatment | null>({ reducer: (a, b) => b ?? a }),
@@ -130,7 +132,7 @@ export function createFilmGraph(emit: (e: PipelineEvent) => void, provider?: Vid
     const shot = currentShot(st);
     emit({ type: "shot", shotId: shot.id, status: "rendering" });
     try {
-      const render = await _provider.generateShot({ prompt: st.prompt ?? "", shot, aspect: st.aspect });
+      const render = await _provider.generateShot({ prompt: st.prompt ?? "", shot, aspect: st.aspect, resolution: st.resolution });
       emit({ type: "shot", shotId: shot.id, status: "ready", render });
       return {
         shotResults: {

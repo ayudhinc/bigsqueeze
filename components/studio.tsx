@@ -185,6 +185,7 @@ export function Studio({ tweaks, mode = "demo" }: { tweaks: Tweaks; mode?: "demo
   const [filmUrl, setFilmUrl] = useState<string | null>(null);
   const [provider, setProvider] = useState("simulated");
   const [aspect, setAspect] = useState("9:16");
+  const [resolution, setResolution] = useState("720p");
   const [targetLength, setTargetLength] = useState("5s");
   const [renders, setRenders] = useState<Array<{ file: string; url: string; size: number }>>([]);
   const [presets] = useState(() => getPresets());
@@ -331,7 +332,7 @@ export function Studio({ tweaks, mode = "demo" }: { tweaks: Tweaks; mode?: "demo
       const res = await fetch("/api/direct", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ idea: logline, provider, aspect, targetLength }),
+        body: JSON.stringify({ idea: logline, provider, aspect, resolution, targetLength }),
         signal: ac.signal,
       });
 
@@ -544,7 +545,7 @@ export function Studio({ tweaks, mode = "demo" }: { tweaks: Tweaks; mode?: "demo
       <div className="studio__bar">
         <div className="bar-block">
           <span className="label">Project</span>
-          <div className="value"><b>{tweaks.projectName || "Untitled"}</b> · {aspect} · 24p</div>
+          <div className="value"><b>{tweaks.projectName || "Untitled"}</b> · {aspect} · {resolution} · 24p</div>
           <div className="value" style={{ color: "var(--text-dim)", marginTop: 4 }}>
             Target runtime · {targetLength}
           </div>
@@ -562,6 +563,18 @@ export function Studio({ tweaks, mode = "demo" }: { tweaks: Tweaks; mode?: "demo
               <option value="1:1">1:1</option>
               <option value="4:3">4:3</option>
               <option value="9:16">9:16</option>
+            </select>
+            <select
+              className="provider-select"
+              value={resolution}
+              onChange={(e) => setResolution(e.target.value)}
+              disabled={phase !== "idle" && phase !== "done"}
+              style={{ width: "auto" }}
+            >
+              <option value="360p">360p</option>
+              <option value="540p">540p</option>
+              <option value="720p">720p</option>
+              <option value="1080p">1080p</option>
             </select>
             <select
               className="provider-select"

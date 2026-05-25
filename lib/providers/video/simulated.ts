@@ -16,7 +16,9 @@ export class SimulatedVideoProvider implements VideoProvider {
     const hue = h % 360;
     const hue2 = (hue + 40) % 360;
 
-    const { w, h: svgH } = aspectDimensions(input.aspect ?? "16:9");
+    const { w, h: svgH } = aspectDimensions(input.aspect ?? "16:9", input.resolution ?? "720p");
+    const dur = Math.max(2, shot.durationSec);
+    const durStr = `${dur}s`;
     const caption = wrap(escapeXml(shot.description || prompt), Math.round(w / 30))
       .map(
         (ln, i) =>
@@ -29,14 +31,14 @@ export class SimulatedVideoProvider implements VideoProvider {
   <defs>
     <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="hsl(${hue} 70% 22%)">
-        <animate attributeName="stop-color" values="hsl(${hue} 70% 22%);hsl(${hue2} 70% 30%);hsl(${hue} 70% 22%)" dur="6s" repeatCount="indefinite"/>
+        <animate attributeName="stop-color" values="hsl(${hue} 70% 22%);hsl(${hue2} 70% 30%);hsl(${hue} 70% 22%)" dur="${durStr}" repeatCount="indefinite"/>
       </stop>
       <stop offset="1" stop-color="hsl(${hue2} 70% 14%)"/>
     </linearGradient>
   </defs>
   <rect width="${w}" height="${svgH}" fill="url(#g)"/>
   <circle cx="${cx}" cy="${cy}" r="${r}" fill="hsl(${hue2} 80% 60% / 0.22)">
-    <animate attributeName="cy" values="${cy};${cy + svgH * 0.07};${cy}" dur="5s" repeatCount="indefinite"/>
+    <animate attributeName="cy" values="${cy};${cy + svgH * 0.07};${cy}" dur="${durStr}" repeatCount="indefinite"/>
   </circle>
   <text x="${w * 0.05}" y="${svgH * 0.15}" font-family="ui-monospace, monospace" font-size="${svgH * 0.028}" fill="rgba(255,255,255,0.5)" letter-spacing="3">SHOT ${String(shot.index + 1).padStart(2, "0")} · ${shot.durationSec}s · SIM</text>
   ${caption}
@@ -95,11 +97,10 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function aspectDimensions(aspect: string): { w: number; h: number } {
+function aspectDimensions(aspect: string, resolution: string): { w: number; h: number } {
   const parts = aspect.split(":").map(Number);
   const ratio = parts[0] / parts[1];
-  if (ratio >= 1) {
-    return { w: 1280, h: Math.round(1280 / ratio) };
-  }
-  return { w: Math.round(720 * ratio), h: 720 };
+  const targetH = parseInt(resolution.replace("p", ""), 10) || 720;
+  const w = Math.round(targetH * ratio);
+  return { w, h: targetH };
 }

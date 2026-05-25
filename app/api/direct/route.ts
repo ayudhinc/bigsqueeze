@@ -7,12 +7,14 @@ export async function POST(req: Request) {
   let idea = "";
   let provider = "simulated";
   let aspect = "16:9";
+  let resolution = "720p";
   let targetLength = "60s";
   try {
-    const body = (await req.json()) as { idea?: string; provider?: string; aspect?: string; targetLength?: string };
+    const body = (await req.json()) as { idea?: string; provider?: string; aspect?: string; resolution?: string; targetLength?: string };
     idea = body.idea?.trim() ?? "";
     provider = body.provider ?? "simulated";
     aspect = body.aspect ?? "9:16";
+    resolution = body.resolution ?? "720p";
     targetLength = body.targetLength ?? "5s";
   } catch {
     /* fall through to validation */
@@ -30,7 +32,7 @@ export async function POST(req: Request) {
       const send = (event: unknown) =>
         controller.enqueue(encoder.encode(`data: ${JSON.stringify(event)}\n\n`));
       try {
-        for await (const event of runPipeline(idea, provider, aspect, targetLength)) {
+        for await (const event of runPipeline(idea, provider, aspect, resolution, targetLength)) {
           send(event);
         }
       } catch (err) {
