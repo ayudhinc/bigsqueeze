@@ -3,9 +3,10 @@ import { createOpenAI } from "@ai-sdk/openai";
 import { z } from "zod/v4";
 
 /* ── Provider selection ───────────────────────────────────────────────────
-   Three modes, controlled by LLM_PROVIDER:
+   Four modes, controlled by LLM_PROVIDER:
      "gateway" (default) → AI Gateway: model string "provider/model"
      "groq"             → Groq API (OpenAI-compatible)
+     "crusoe"           → Crusoe Cloud Managed Inference (OpenAI-compatible)
      "openai"           → Direct OpenAI
    ──────────────────────────────────────────────────────────────────────────── */
 const PROVIDER = (process.env.LLM_PROVIDER ?? "gateway").toLowerCase();
@@ -23,9 +24,11 @@ export type AgentId =
 const DEFAULT_MODEL: string =
   PROVIDER === "groq"
     ? process.env.GROQ_MODEL ?? "openai/gpt-oss-20b"
-    : PROVIDER === "openai"
-      ? process.env.OPENAI_MODEL ?? "gpt-4o-mini"
-      : process.env.LLM_MODEL ?? "openai/gpt-4o-mini";
+    : PROVIDER === "crusoe"
+      ? process.env.CRUSOE_MODEL ?? "hack-crusoe/Nemotron-3-Nano-30B-A3B-FP8"
+      : PROVIDER === "openai"
+        ? process.env.OPENAI_MODEL ?? "gpt-4o-mini"
+        : process.env.LLM_MODEL ?? "openai/gpt-4o-mini";
 
 /* ── Per-agent model routing ──────────────────────────────────────────────
    Override with env vars, e.g. LLM_MODEL_WRITER=llama-3.1-8b-instant.
@@ -45,6 +48,7 @@ const ALL_SAME = new Set(Object.values(AGENT_MODEL)).size === 1;
 
 /* ── Cached provider handles ────────────────────────────────────────────── */
 let _groq: ReturnType<typeof createOpenAI> | null = null;
+let _crusoe: ReturnType<typeof createOpenAI> | null = null;
 let _openai: ReturnType<typeof createOpenAI> | null = null;
 
 function resolveModel(agent?: AgentId) {
@@ -59,6 +63,15 @@ function resolveModel(agent?: AgentId) {
           apiKey: process.env.GROQ_API_KEY,
         });
       return _groq(name);
+    }
+    case "crusoe": {
+      if (!_crusoe)
+        _crusoe = createOpenAI({
+          name: "crusoe",
+          baseURL: process.env.CRUSOE_BASE_URL ?? "https://api.inference.crusoecloud.com/v1",
+          apiKey: process.env.CRUSOE_API_KEY,
+        });
+      return _crusoe(name);
     }
     case "openai": {
       if (!_openai)
@@ -153,6 +166,7 @@ function describeSchema(schema: z.ZodType<unknown>): string {
  */
 export function hasLLM(): boolean {
   if (PROVIDER === "groq") return Boolean(process.env.GROQ_API_KEY);
+  if (PROVIDER === "crusoe") return Boolean(process.env.CRUSOE_API_KEY);
   if (PROVIDER === "openai") return Boolean(process.env.OPENAI_API_KEY);
   return Boolean(process.env.AI_GATEWAY_API_KEY);
 }
