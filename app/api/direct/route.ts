@@ -36,6 +36,7 @@ export async function POST(req: Request) {
           send(event);
         }
       } catch (err) {
+        console.error("Pipeline error:", err);
         send({ type: "error", message: (err as Error).message });
       } finally {
         controller.close();

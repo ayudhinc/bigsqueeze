@@ -71,7 +71,7 @@ function resolveModel(agent?: AgentId) {
           baseURL: process.env.CRUSOE_BASE_URL ?? "https://api.inference.crusoecloud.com/v1",
           apiKey: process.env.CRUSOE_API_KEY,
         });
-      return _crusoe(name);
+      return _crusoe.chat(name);
     }
     case "openai": {
       if (!_openai)
@@ -139,24 +139,29 @@ async function withRetry<T>(fn: () => Promise<T>, retries = 5): Promise<T> {
 }
 
 /* ── Schema → readable field descriptor ──────────────────────────────────── */
-function describeSchema(schema: z.ZodType<unknown>): string {
-  const shape = (schema as unknown as { _def: { shape: Record<string, z.ZodType<unknown>> } })._def?.shape;
-  if (shape) {
-    const fields = Object.entries(shape).map(([key, field]) => {
-      const ft = (field as unknown as { type: string; _def?: { element?: unknown } }).type;
-      const val =
-        ft === "array"
-          ? "[...]"
-          : ft === "string"
-            ? '"string"'
-            : ft === "number"
-              ? "123"
-              : '"…"';
-      return `  "${key}": ${val}`;
-    });
-    return `{\n${fields.join(",\n")}\n}`;
+function describeType(schema: z.ZodType<unknown>, indent = 0): string {
+  const pad = "  ".repeat(indent);
+  const inner = (schema as unknown as { _def?: { shape?: Record<string, z.ZodType<unknown>>; element?: z.ZodType<unknown> } })._def;
+
+  if (inner?.shape) {
+    const fields = Object.entries(inner.shape).map(([key, field]) =>
+      `${pad}  "${key}": ${describeType(field as z.ZodType<unknown>, indent + 1)}`,
+    );
+    return `{\n${fields.join(",\n")}\n${pad}}`;
   }
-  return "JSON object";
+
+  if (inner?.element) {
+    return `[${describeType(inner.element, indent)}]`;
+  }
+
+  const typeName = (schema.constructor?.name ?? "").toLowerCase();
+  if (typeName.includes("number")) return "123";
+  if (typeName.includes("boolean")) return "true";
+  return `"string"`;
+}
+
+function describeSchema(schema: z.ZodType<unknown>): string {
+  return describeType(schema);
 }
 
 /**
