@@ -12,17 +12,13 @@
  */
 
 import { chromium } from "playwright";
-import { resolve, dirname } from "path";
-import { fileURLToPath } from "url";
-import { mkdirSync, readdirSync, renameSync } from "fs";
+import { readdirSync, renameSync } from "fs";
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const OUT_DIR = resolve(__dirname, "..", "public", "renders");
-mkdirSync(OUT_DIR, { recursive: true });
+const OUT_DIR = "/tmp";
+const VIDEO_PATH = `${OUT_DIR}/devnet-demo-${Date.now()}`;
 
 const LOGLINE = "A cyberpunk street artist leaves her mark on a city that watches back.";
 const STUDIO_URL = "http://localhost:3005/studio";
-const VIDEO_PATH = resolve(OUT_DIR, `demo-${Date.now()}`);
 
 function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
@@ -95,7 +91,7 @@ async function main() {
   // Rename the auto-generated video to our predictable name
   const files = readdirSync(OUT_DIR).filter((f) => f.startsWith("page@") && f.endsWith(".webm"));
   if (files.length) {
-    const src = resolve(OUT_DIR, files.sort().reverse()[0]);
+    const src = `${OUT_DIR}/${files.sort().reverse()[0]}`;
     const dst = VIDEO_PATH + ".webm";
     renameSync(src, dst);
     console.log(`\n  Done — demo saved to: ${dst}\n`);
