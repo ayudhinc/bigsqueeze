@@ -17,7 +17,7 @@ import { readdirSync, renameSync } from "fs";
 const OUT_DIR = "/tmp";
 const VIDEO_PATH = `${OUT_DIR}/devnet-demo-${Date.now()}`;
 
-const LOGLINE = "A cyberpunk street artist leaves her mark on a city that watches back.";
+const LOGLINE = "A lone astronaut discovers a bioluminescent forest on a dead moon.";
 const STUDIO_URL = "http://localhost:3005/studio";
 
 function sleep(ms) {
@@ -40,12 +40,21 @@ async function main() {
   const page = await context.newPage();
 
   // ── 1. Navigate to Studio ──────────────────────────────────────────────
-  console.log("  [1/7]  Navigating to Studio …");
+  console.log("  [1/8]  Navigating to Studio …");
   await page.goto(STUDIO_URL, { waitUntil: "networkidle" });
   await sleep(2000);
 
-  // ── 2. Set duration to 15s ─────────────────────────────────────────────
-  console.log("  [2/7]  Setting target duration to 15s …");
+  // ── 2. Set provider to LTX-2 ───────────────────────────────────────────
+  console.log("  [2/8]  Selecting LTX-2 provider …");
+  const providerSelect = page.locator('select.provider-select').nth(0);
+  await sleep(200);
+  await providerSelect.focus();
+  await sleep(200);
+  await providerSelect.selectOption("fal/ltx-2");
+  await sleep(600);
+
+  // ── 3. Set duration to 15s ─────────────────────────────────────────────
+  console.log("  [3/8]  Setting target duration to 15s …");
   const durationSelect = page.locator('select.provider-select').nth(3);
   await sleep(300);
   await durationSelect.focus();
@@ -53,8 +62,8 @@ async function main() {
   await durationSelect.selectOption("15s");
   await sleep(600);
 
-  // ── 3. Select all existing text in the logline input, then type ────────
-  console.log("  [3/7]  Typing logline …");
+  // ── 4. Select all existing text in the logline input, then type ────────
+  console.log("  [4/8]  Typing logline …");
   const input = page.locator('input[placeholder*="getaway driver"]');
   await input.click();
   await sleep(200);
@@ -70,13 +79,13 @@ async function main() {
   }
   await sleep(800);
 
-  // ── 4. Click GENERATE ──────────────────────────────────────────────────
-  console.log("  [4/7]  Clicking GENERATE …");
+  // ── 5. Click GENERATE ──────────────────────────────────────────────────
+  console.log("  [5/8]  Clicking GENERATE …");
   const genBtn = page.locator('button:has-text("GENERATE")');
   await genBtn.click();
 
-  // ── 5. Watch pipeline live ─────────────────────────────────────────────
-  console.log("  [5/7]  Pipeline running …");
+  // ── 6. Watch pipeline live ─────────────────────────────────────────────
+  console.log("  [6/8]  Pipeline running …");
 
   // Wait for first agent to turn WORKING
   await page.waitForSelector('.agents .status:has-text("WORKING")', { timeout: 30000 });
@@ -85,15 +94,15 @@ async function main() {
   // Wait for pipeline to finish — film player video element
   try {
     await page.waitForSelector('.film-player video', { timeout: 300_000 });
-    console.log("  [6/7]  Pipeline complete — film player visible");
+    console.log("  [7/8]  Pipeline complete — film player visible");
   } catch {
-    console.log("  [6/7]  Trying download button instead …");
+    console.log("  [7/8]  Trying download button instead …");
     await page.waitForSelector('.dl-btn', { timeout: 300_000 });
   }
   await sleep(3000);
 
-  // ── 6. Click download ──────────────────────────────────────────────────
-  console.log("  [7/7]  Clicking download …");
+  // ── 7. Click download ──────────────────────────────────────────────────
+  console.log("  [8/8]  Clicking download …");
   const dlBtn = page.locator('.dl-btn');
   if (await dlBtn.isVisible()) {
     await dlBtn.click();
