@@ -46,8 +46,7 @@ async function main() {
 
   // ── 2. Set duration to 15s ─────────────────────────────────────────────
   console.log("  [2/7]  Setting target duration to 15s …");
-  const durationSelect = page.locator('select.provider-select');
-  await durationSelect.scrollIntoViewIfNeeded();
+  const durationSelect = page.locator('select.provider-select').nth(3);
   await sleep(300);
   await durationSelect.focus();
   await sleep(200);
@@ -105,15 +104,20 @@ async function main() {
   await context.close();
   await browser.close();
 
+  // Wait for video file to be written
+  await sleep(2000);
+
   // Rename the auto-generated video to our predictable name
   const files = readdirSync(OUT_DIR).filter((f) => f.startsWith("page@") && f.endsWith(".webm"));
   if (files.length) {
-    const src = `${OUT_DIR}/${files.sort().reverse()[0]}`;
+    const src = `${OUT_DIR}/${files[0]}`;
     const dst = VIDEO_PATH + ".webm";
+    // Remove any 0-byte residual from a prior run
+    try { renameSync(dst, dst); } catch {}
     renameSync(src, dst);
     console.log(`\n  Done — demo saved to: ${dst}\n`);
   } else {
-    console.log(`\n  Done — no video file found (expected at ${VIDEO_PATH}.webm)\n`);
+    console.log(`\n  Done — video file not found in ${OUT_DIR}.\n    Expected a file named page@....webm\n`);
   }
 }
 
