@@ -29,62 +29,79 @@ async function main() {
 
   const browser = await chromium.launch({
     headless: false,
-    args: ["--window-size=1440,900"],
+    args: ["--window-size=1600,1000"],
   });
 
   const context = await browser.newContext({
-    viewport: { width: 1440, height: 900 },
-    recordVideo: { dir: OUT_DIR, size: { width: 1440, height: 900 } },
+    viewport: { width: 1600, height: 1000 },
+    recordVideo: { dir: OUT_DIR, size: { width: 1600, height: 1000 } },
   });
 
   const page = await context.newPage();
 
   // ── 1. Navigate to Studio ──────────────────────────────────────────────
-  console.log("  [1/6]  Navigating to Studio …");
+  console.log("  [1/7]  Navigating to Studio …");
   await page.goto(STUDIO_URL, { waitUntil: "networkidle" });
-  await sleep(1200);
+  await sleep(2000);
 
-  // ── 2. Type logline (character by character for human feel) ────────────
-  console.log("  [2/6]  Typing logline …");
+  // ── 2. Set duration to 15s ─────────────────────────────────────────────
+  console.log("  [2/7]  Setting target duration to 15s …");
+  const durationSelect = page.locator('select.provider-select');
+  await durationSelect.scrollIntoViewIfNeeded();
+  await sleep(300);
+  await durationSelect.focus();
+  await sleep(200);
+  await durationSelect.selectOption("15s");
+  await sleep(600);
+
+  // ── 3. Select all existing text in the logline input, then type ────────
+  console.log("  [3/7]  Typing logline …");
   const input = page.locator('input[placeholder*="getaway driver"]');
   await input.click();
+  await sleep(200);
+  // Select all existing text
+  await page.keyboard.press("Meta+a");
+  await sleep(200);
+  // Delete it
+  await page.keyboard.press("Backspace");
   await sleep(300);
+  // Type new logline character by character
   for (const char of LOGLINE) {
-    await page.keyboard.type(char, { delay: 20 + Math.random() * 15 });
+    await page.keyboard.type(char, { delay: 30 + Math.random() * 25 });
   }
-  await sleep(500);
+  await sleep(800);
 
-  // ── 3. Click GENERATE ──────────────────────────────────────────────────
-  console.log("  [3/6]  Clicking GENERATE …");
+  // ── 4. Click GENERATE ──────────────────────────────────────────────────
+  console.log("  [4/7]  Clicking GENERATE …");
   const genBtn = page.locator('button:has-text("GENERATE")');
   await genBtn.click();
 
-  // ── 4. Watch pipeline live ─────────────────────────────────────────────
-  console.log("  [4/6]  Pipeline running …");
+  // ── 5. Watch pipeline live ─────────────────────────────────────────────
+  console.log("  [5/7]  Pipeline running …");
 
   // Wait for first agent to turn WORKING
   await page.waitForSelector('.agents .status:has-text("WORKING")', { timeout: 30000 });
-  await sleep(1500);
+  await sleep(3000);
 
   // Wait for pipeline to finish — film player video element
   try {
     await page.waitForSelector('.film-player video', { timeout: 300_000 });
-    console.log("  [5/6]  Pipeline complete — film player visible");
+    console.log("  [6/7]  Pipeline complete — film player visible");
   } catch {
-    console.log("  [5/6]  Trying download button instead …");
+    console.log("  [6/7]  Trying download button instead …");
     await page.waitForSelector('.dl-btn', { timeout: 300_000 });
   }
-  await sleep(2000);
+  await sleep(3000);
 
-  // ── 5. Click download ──────────────────────────────────────────────────
-  console.log("  [6/6]  Clicking download …");
+  // ── 6. Click download ──────────────────────────────────────────────────
+  console.log("  [7/7]  Clicking download …");
   const dlBtn = page.locator('.dl-btn');
   if (await dlBtn.isVisible()) {
     await dlBtn.click();
-    await sleep(1000);
+    await sleep(1500);
   }
 
-  // ── 6. Close — Playwright finalises the video ──────────────────────────
+  // ── 7. Close — Playwright finalises the video ──────────────────────────
   await context.close();
   await browser.close();
 
